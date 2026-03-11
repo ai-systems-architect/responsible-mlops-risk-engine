@@ -1,0 +1,42 @@
+# Virtual environment
+venv/
+env/
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# ML artifacts
+*.pkl
+*.joblib
+mlruns/
+mlflow.db
+
+# AWS
+.aws/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.tfplan
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data files
+*.csv
+*.parquet
+data/
