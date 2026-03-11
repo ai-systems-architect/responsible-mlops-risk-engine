@@ -9,19 +9,19 @@
 
 This project implements a complete, auditable machine learning pipeline for income-based risk scoring using the **2023 American Community Survey (ACS) Public Use Microdata Sample (PUMS)** — official U.S. Census Bureau data representing approximately 3.5 million individuals.
 
-Built to meet the standards expected in federal and government delivery environments, this system emphasizes **responsible AI practices**, **reproducible infrastructure**, and **auditability at every stage** — not as afterthoughts, but as first-class design requirements.
+Built to meet the standards expected in federal and government delivery environments, this system emphasizes **responsible AI practices**, **reproducible infrastructure**, and **auditability at every stage** as first-class design requirements.
 
 ---
 
-## Why This Project Exists
+## Background & Design Philosophy
 
-Most ML portfolio projects train a model and stop. This project simulates what a government delivery team actually ships:
+Federal and government ML systems require more than accurate models. They require auditability, fairness documentation, reproducible infrastructure, and alignment with risk management frameworks. This project is built to those standards from day one.
 
-- A **justified model selection process** — not just "I picked XGBoost"
-- A **fairness audit** built into the pipeline — not retrofitted after the fact
-- Infrastructure that can be **reviewed, versioned, and reproduced** by any team member
-- A **decision log** structured for auditors, inspectors general, and program managers
-- Alignment with **NIST AI Risk Management Framework (AI RMF 1.0)**
+- Model selection documented with metrics and tradeoffs at each stage — OLS, Ridge, then XGBoost
+- Demographic fairness audits integrated into the training and deployment pipeline as a first-class requirement
+- Decision log structured for auditor and inspector general review
+- Infrastructure versioned and reproducible via Terraform — no manual console steps
+- Alignment with NIST AI Risk Management Framework (AI RMF 1.0) from initial design
 
 ---
 
@@ -40,15 +40,15 @@ This pipeline maps directly to the four NIST AI RMF core functions:
 
 ## Model Progression — Justified Complexity
 
-Rather than jumping directly to the most complex model, this project follows a principled progression:
+Rather than jumping directly to the most complex model, this project follows a principled progression with each transition documented in the **Decision Log** (`docs/decision_log.md`):
 
 | Stage | Model | Why |
 |---|---|---|
 | **Baseline** | OLS Logistic Regression | Establishes interpretable baseline, fully auditable coefficients |
 | **Regularized** | Ridge Regression | Handles multicollinearity in demographic features, reduces overfitting |
-| **Production** | XGBoost | Justified by AUC improvement >8% over Ridge, with SHAP to maintain explainability |
+| **Production** | XGBoost | Selected based on cross-validated AUC improvement over Ridge — see `docs/decision_log.md` |
 
-Each transition is documented in the **Decision Log** (`docs/decision_log.md`) with metrics, tradeoffs, and justification — the format used for government client deliverables.
+Each transition is justified with metrics, tradeoffs, and business rationale — the format used for government client deliverables.
 
 ---
 
@@ -68,34 +68,34 @@ This pipeline treats fairness as an engineering requirement, not a checkbox.
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        DATA LAYER                           │
-│  ACS PUMS 2023 (Census API) → S3 (raw) → S3 (processed)   │
+│  ACS PUMS 2023 (Census API) → S3 (raw) → S3 (processed)     │
 │  DVC tracks all dataset versions                            │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                      TRAINING LAYER                         │
-│  OLS → Ridge → XGBoost  |  Optuna hyperparameter tuning    │
-│  MLflow experiment tracking  |  SHAP explainability        │
+│  OLS → Ridge → XGBoost  |  Optuna hyperparameter tuning     │
+│  MLflow experiment tracking  |  SHAP explainability         │
 │  Fairness audit report generated per run                    │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                       CI/CD LAYER                           │
-│  GitHub Actions → lint → test → validate metrics           │
-│  Auto-promote to SageMaker if AUC > 0.82 + fairness pass   │
+│  GitHub Actions → lint → test → validate metrics            │
+│  Fairness gate → Manual approval → SageMaker deployment     │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                      SERVING LAYER                          │
-│  SageMaker Real-Time Endpoint  |  API Gateway  |  Lambda   │
+│  SageMaker Real-Time Endpoint  |  API Gateway  |  Lambda    │
 │  100% data capture to S3 for auditability                   │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                    MONITORING LAYER                         │
 │  Evidently AI drift detection (daily)                       │
-│  CloudWatch alarms  |  EventBridge → Lambda retraining     │
-│  Delayed label evaluation  |  Champion-challenger A/B      │
+│  CloudWatch alarms  |  EventBridge → Lambda retraining      │
+│  Delayed label evaluation  |  Champion-challenger A/B       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -152,7 +152,7 @@ responsible-mlops-risk-engine/
 │   ├── decision_log.md      # Every model decision justified
 │   ├── architecture.md      # System design document
 │   ├── fairness_report.md   # Demographic audit findings
-│   └── nist_alignment.md    # NIST AI RMF mapping
+│   └── nist_alignment.md   # NIST AI RMF mapping
 ├── notebooks/               # Exploratory analysis
 ├── tests/                   # Unit + integration tests
 ├── .github/workflows/       # CI/CD GitHub Actions
@@ -171,11 +171,12 @@ Every push to `main` triggers:
 2. **Unit tests** — pytest across all modules
 3. **Data validation** — schema and null rate checks
 4. **Model training** — full pipeline run
-5. **Metrics gate** — AUC > 0.82 AND fairness audit pass required
+5. **Metrics gate** — AUC threshold must be met
 6. **Fairness gate** — disparate impact ratio must be within acceptable bounds
-7. **Deploy** — automatic promotion to SageMaker if all gates pass
+7. **Manual approval** — production deployment requires explicit human sign-off
+8. **Deploy** — SageMaker endpoint promotion upon approval
 
-The fairness gate is intentional — a model that passes AUC but fails the demographic audit does **not** get deployed. This is the government delivery standard.
+> **Note on deployment:** The final SageMaker deployment step requires manual approval. In government delivery environments, production deployments require human sign-off regardless of automated test results. A model that passes the AUC gate but fails the fairness audit does not proceed to approval.
 
 ---
 
@@ -202,6 +203,8 @@ terraform plan -out=tfplan
 **American Community Survey (ACS) Public Use Microdata Sample (PUMS) — 2023**
 Source: U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
 
+Official government microdata representing approximately 3.5 million individuals across the United States. Released annually and used by federal agencies, research institutions, and policy organizations for demographic and economic analysis.
+
 | Feature | Type | Notes |
 |---|---|---|
 | AGE | Continuous | Age of individual |
@@ -223,11 +226,12 @@ Sensitive features are never used as model inputs. They are preserved separately
 
 | Decision | Rationale |
 |---|---|
-| ACS PUMS 2023 over UCI 1994 Census | Current government data — 30 years more recent, 70x more records |
-| OLS → Ridge → XGBoost progression | Justified complexity — each step documented with metrics |
+| ACS PUMS 2023 | Official U.S. Census Bureau microdata — current, government-sourced, 3.5M records |
+| OLS → Ridge → XGBoost progression | Justified complexity — each step documented with metrics in decision log |
 | Fairness gate in CI/CD | Demographic audit is a deployment requirement, not optional |
+| Manual approval for SageMaker deploy | Reflects government delivery standard — production requires human sign-off |
 | Terraform over CDK | Cloud-agnostic IaC — same workflow applicable to GCP/Azure |
-| 100% data capture on endpoint | Government auditability requirement — full prediction history |
+| 100% data capture on endpoint | Government auditability requirement — full prediction history preserved |
 | Sensitive features separated at ingest | Prevents proxy discrimination, enables clean fairness reporting |
 
 ---
