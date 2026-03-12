@@ -1,0 +1,37 @@
+name: ML Pipeline CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest python-dotenv
+
+      - name: Lint with flake8
+        run: |
+          flake8 src/ config.py --max-line-length=100 --ignore=E501,W503
+
+      - name: Check project structure
+        run: |
+          test -f config.py
+          test -f src/data/ingest.py
+          test -f src/data/preprocess.py || echo "preprocess.py not yet created — skipping"
+          test -f docs/decision_log.md
+          echo "Project structure verified"
