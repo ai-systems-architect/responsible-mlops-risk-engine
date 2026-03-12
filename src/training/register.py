@@ -25,12 +25,10 @@ NIST AI RMF alignment:
     MANAGE 1.3 — staging gate enforced before production promotion
 """
 
-import joblib
 import logging
 import mlflow
 import mlflow.xgboost
 import pandas as pd
-import numpy as np
 from glob import glob
 from mlflow.models.signature import infer_signature
 
@@ -38,8 +36,6 @@ from config import (
     MLFLOW_EXPERIMENT_NAME,
     MLFLOW_TRACKING_URI,
     PROCESSED_DATA_DIR,
-    FAIRNESS_THRESHOLD,
-    MIN_AUC_THRESHOLD,
 )
 from src.training.evaluate import (
     load_artifacts,
@@ -294,7 +290,7 @@ def register_model(
     print(f"  Experiment:  {MLFLOW_EXPERIMENT_NAME}")
     print(f"  Run ID:      {run_id}")
     print(f"  Model:       {model_name} v{version}")
-    print(f"  Alias:       staging")
+    print("  Alias:       staging")
     print(f"  AUC-ROC:     {metrics['auc_roc']}")
     print(f"  F1:          {metrics['f1']}")
     print(f"  Fairness:    {'PASSED' if fairness_passed else 'FAILED'}")
