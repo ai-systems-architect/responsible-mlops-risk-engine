@@ -48,7 +48,7 @@ Complexity is earned — each stage is only justified if it demonstrates meaning
 |---|---|---|---|---|
 | **Baseline** | Logistic Regression | 0.9108 | 0.6508 | Fully interpretable coefficients — strong baseline |
 | **Regularized** | Ridge (L2) | 0.9108 | 0.6507 | CV selected C=100 — no regularization benefit on this dataset |
-| **Production** | XGBoost + Optuna | TBD | TBD | Non-linear relationships in occupation and class_of_worker motivate this stage |
+| **Production** | XGBoost + Optuna | 0.9506 | 0.7633 | occupation ranked 2nd, class_of_worker 4th in feature importance — non-linear signal confirmed |
 
 Ridge produced no improvement over the baseline — documented in `docs/decision_log.md` DL-006. Linear model ceiling reached at AUC 0.91. XGBoost is evaluated based on near-zero linear coefficients for occupation and class_of_worker, suggesting non-linear signal those features carry that logistic regression cannot capture.
 
@@ -141,7 +141,7 @@ responsible-mlops-risk-engine/
 │   ├── training/
 │   │   ├── baseline.py      # Logistic Regression baseline
 │   │   ├── ridge.py         # Ridge Logistic Regression (L2)
-│   │   ├── xgboost.py       # XGBoost + Optuna hyperparameter tuning
+│   │   ├── train_xgboost.py # XGBoost + Optuna hyperparameter tuning
 │   │   ├── evaluate.py      # Metrics + fairness audit
 │   │   └── register.py      # MLflow model registry
 │   ├── serving/
@@ -284,7 +284,7 @@ python3 src/data/ingest.py
 python3 src/data/preprocess.py
 python3 src/training/baseline.py
 python3 src/training/ridge.py
-python3 src/training/xgboost.py
+python3 src/training/train_xgboost.py
 
 # Preview infrastructure (no cost)
 cd infrastructure && terraform init && terraform plan
