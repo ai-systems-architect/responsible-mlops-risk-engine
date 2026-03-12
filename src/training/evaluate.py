@@ -24,7 +24,6 @@ NIST AI RMF alignment:
     MANAGE 2.2  — findings documented for risk response decisions
 """
 
-import os
 import pandas as pd
 import numpy as np
 import joblib
@@ -39,7 +38,6 @@ from sklearn.metrics import (
 )
 
 from config import (
-    TARGET,
     FAIRNESS_THRESHOLD,
     PROCESSED_DATA_DIR,
 )
@@ -222,7 +220,7 @@ def run_fairness_audit(
                 results.append(group_metrics)
 
     results_df = pd.DataFrame(results)
-    flagged = results_df[results_df["flag"] == True]
+    flagged = results_df[results_df["flag"]]
     passed = len(flagged) == 0
 
     return results_df, passed
@@ -295,7 +293,7 @@ def run_evaluation(
     if passed:
         print(f"  PASSED — all groups within ±{FAIRNESS_THRESHOLD} PPR threshold")
     else:
-        flagged = results_df[results_df["flag"] == True]
+        flagged = results_df[results_df["flag"]]
         print(f"  FAILED — {len(flagged)} group(s) exceed ±{FAIRNESS_THRESHOLD} threshold:")
         for _, row in flagged.iterrows():
             print(f"    {row['group']} — PPR: {row['ppr']} | Delta: {row['ppr_delta']}")
