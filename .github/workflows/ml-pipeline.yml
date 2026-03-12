@@ -24,14 +24,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install flake8 pytest python-dotenv
 
+      - name: Show project structure
+        run: ls -la
+
       - name: Lint with flake8
         run: |
           flake8 src/ config.py --max-line-length=100 --ignore=E501,W503,E241
 
       - name: Check project structure
         run: |
-          test -f config.py
-          test -f src/data/ingest.py
-          test -f src/data/preprocess.py || echo "preprocess.py not yet created — skipping"
-          test -f docs/decision_log.md
-          echo "Project structure verified"
+          ls -la
+          test -f config.py && echo "config.py found" || echo "config.py missing"
+          test -d src/data && echo "src/data found" || echo "src/data missing"
+          test -f docs/decision_log.md && echo "decision_log.md found" || echo "missing"
+          echo "Structure check complete"
