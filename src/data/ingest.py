@@ -224,7 +224,7 @@ def run_ingestion(
     logger.info("=" * 55)
     logger.info(f"Ingestion complete — {len(df):,} records")
     logger.info(f"Output: {filepath}")
-    logger.info(f"Next: src/data/preprocess.py")
+    logger.info("Next: src/data/preprocess.py")
     logger.info("=" * 55)
 
     return df

@@ -32,10 +32,8 @@ Optuna:
         OPTUNA_TRIALS_CI    = 5   — fast CI/CD runs
 """
 
-import os
 import pandas as pd
 import numpy as np
-import joblib
 import logging
 import optuna
 from glob import glob
@@ -50,7 +48,6 @@ from sklearn.metrics import (
 )
 
 from config import (
-    TARGET,
     RANDOM_STATE,
     OPTUNA_TRIALS_LOCAL,
     PROCESSED_DATA_DIR,
@@ -116,7 +113,7 @@ def prepare_features(
     test_weights = X_test.pop(WEIGHT_COL)
 
     logger.info(f"Training features ({len(X_train.columns)}): {list(X_train.columns)}")
-    logger.info(f"person_weight extracted — passed as sample_weight to XGBoost")
+    logger.info("person_weight extracted — passed as sample_weight to XGBoost")
 
     return X_train, X_test, train_weights, test_weights
 
@@ -288,8 +285,8 @@ def run_xgboost(
     print(f"  Best parameters: {best_params}")
 
     print("\n--- Model Progression Summary ---")
-    print(f"  Logistic Regression — AUC: 0.9108 | F1: 0.6508")
-    print(f"  Ridge               — AUC: 0.9108 | F1: 0.6507")
+    print("  Logistic Regression — AUC: 0.9108 | F1: 0.6508")
+    print("  Ridge               — AUC: 0.9108 | F1: 0.6507")
     print(f"  XGBoost             — AUC: {metrics['auc_roc']} | F1: {metrics['f1']}")
 
     logger.info("=" * 55)

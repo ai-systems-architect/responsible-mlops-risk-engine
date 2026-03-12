@@ -379,7 +379,7 @@ def run_preprocessing(
     logger.info("=" * 55)
     logger.info("Preprocessing complete")
     logger.info(f"X_train: {X_train.shape} | X_test: {X_test.shape}")
-    logger.info(f"Next: src/training/baseline.py")
+    logger.info("Next: src/training/baseline.py")
     logger.info("=" * 55)
 
     return X_train, X_test, y_train, y_test, sensitive_df
@@ -398,7 +398,6 @@ if __name__ == "__main__":
     print(sensitive_df.head(3).to_string())
 
     print("\n--- Processed Files ---")
-    import os
     for f in sorted(os.listdir("data/processed")):
         size = os.path.getsize(f"data/processed/{f}") / 1024
         print(f"  {f} ({size:.0f} KB)")

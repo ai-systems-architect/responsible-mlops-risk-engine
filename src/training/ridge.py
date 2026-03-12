@@ -43,7 +43,6 @@ from sklearn.metrics import (
 )
 
 from config import (
-    TARGET,
     RANDOM_STATE,
     PROCESSED_DATA_DIR,
 )

@@ -27,10 +27,7 @@ metrics are reviewed manually. No value in logging a single run
 before a comparison exists.
 """
 
-import os
 import pandas as pd
-import numpy as np
-import joblib
 import logging
 from glob import glob
 from sklearn.linear_model import LogisticRegression
@@ -43,7 +40,6 @@ from sklearn.metrics import (
 )
 
 from config import (
-    TARGET,
     RANDOM_STATE,
     PROCESSED_DATA_DIR,
 )
