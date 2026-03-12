@@ -369,10 +369,15 @@ def run_preprocessing(
     model_df, scaler = scale_numerics(model_df)
     X_train, X_test, y_train, y_test = split_data(model_df)
 
+    # Split sensitive_df using the same index as X_train/X_test
+    # so evaluate.py receives demographic features aligned with
+    # the test set only — not the full dataset
+    sensitive_test = sensitive_df.loc[X_test.index].reset_index(drop=True)
+
     save_processed(
         X_train, X_test,
         y_train, y_test,
-        sensitive_df, encoders, scaler,
+        sensitive_test, encoders, scaler,
         output_dir=output_dir,
     )
 

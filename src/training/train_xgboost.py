@@ -35,6 +35,7 @@ Optuna:
 import pandas as pd
 import numpy as np
 import logging
+import joblib
 import optuna
 from glob import glob
 from xgboost import XGBClassifier
@@ -66,6 +67,9 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # Extracted from X_train before training — used as sample_weight, not a feature
 WEIGHT_COL = "person_weight"
+
+# Directory for saved model artifacts
+MODELS_DIR = "models"
 
 
 def load_processed(data_dir: str = PROCESSED_DATA_DIR) -> tuple:
@@ -258,6 +262,18 @@ def run_xgboost(
     model = XGBClassifier(**final_params)
     model.fit(X_train, y_train, sample_weight=train_weights)
     logger.info("Final model trained on full training set")
+
+    # --- Save model artifact ---
+    # Saved to models/ so evaluate.py and register.py can load it
+    # without rerunning training. Filename includes timestamp to
+    # match the convention used for processed data artifacts.
+    import os
+    from datetime import datetime
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d")
+    model_path = f"{MODELS_DIR}/xgboost_{timestamp}.joblib"
+    joblib.dump(model, model_path)
+    logger.info(f"Model saved: {model_path}")
 
     # --- Evaluate on held-out test set ---
     y_pred_proba = model.predict_proba(X_test)[:, 1]
