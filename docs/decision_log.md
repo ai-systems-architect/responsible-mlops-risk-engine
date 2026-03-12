@@ -26,3 +26,14 @@ program eligibility determinations.
 **Rationale:** 88,928 records sufficient for model development with 
 significantly faster iteration cycles than national pull (~1.5M records).
 National pull reserved for final model training.
+
+---
+
+## DL-004 — person_weight Handling
+**Date:** 2026-03-12
+**Decision:** person_weight excluded from OLS and Ridge inputs.
+Used as sample_weight in XGBoost training only.
+**Rationale:** Census sampling weight is a survey methodology artifact,
+not a personal characteristic. Linear baseline models are kept clean
+for interpretability. XGBoost uses it to produce population-representative
+predictions aligned with federal agency requirements.
