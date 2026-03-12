@@ -99,7 +99,6 @@ CATEGORICAL_FEATURES = [
 NUMERIC_FEATURES = [
     "age",
     "hours_per_week",
-    "person_weight",
 ]
 
 # Sensitive demographic features — preserved for fairness audits only

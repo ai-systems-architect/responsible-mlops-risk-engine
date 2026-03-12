@@ -17,7 +17,7 @@ Built to meet the standards expected in federal and government delivery environm
 
 Federal and government ML systems require more than accurate models. They require auditability, fairness documentation, reproducible infrastructure, and alignment with risk management frameworks. This project is built to those standards from day one.
 
-- Model selection documented with metrics and tradeoffs at each stage — OLS, Ridge, then XGBoost
+- Model selection documented with metrics and tradeoffs at each stage — Logistic Regression, Ridge, then XGBoost
 - Demographic fairness audits integrated into the training and deployment pipeline as a first-class requirement
 - Decision log structured for auditor and inspector general review
 - Infrastructure versioned and reproducible via Terraform — no manual console steps
@@ -40,15 +40,17 @@ This pipeline maps directly to the four NIST AI RMF core functions:
 
 ## Model Progression — Justified Complexity
 
-Rather than jumping directly to the most complex model, this project follows a principled progression with each transition documented in the **Decision Log** (`docs/decision_log.md`):
+Rather than jumping directly to the most complex model, this project follows a principled progression with each transition documented in the **Decision Log** (`docs/decision_log.md`).
 
-| Stage | Model | Why |
-|---|---|---|
-| **Baseline** | OLS Logistic Regression | Establishes interpretable baseline, fully auditable coefficients |
-| **Regularized** | Ridge Regression | Handles multicollinearity in demographic features, reduces overfitting |
-| **Production** | XGBoost | Selected based on cross-validated AUC improvement over Ridge — see `docs/decision_log.md` |
+Complexity is earned — each stage is only justified if it demonstrates meaningful improvement over the previous one.
 
-Each transition is justified with metrics, tradeoffs, and business rationale — the format used for government client deliverables.
+| Stage | Model | AUC-ROC | F1 | Notes |
+|---|---|---|---|---|
+| **Baseline** | Logistic Regression | 0.9108 | 0.6508 | Fully interpretable coefficients — strong baseline |
+| **Regularized** | Ridge (L2) | 0.9108 | 0.6507 | CV selected C=100 — no regularization benefit on this dataset |
+| **Production** | XGBoost + Optuna | TBD | TBD | Non-linear relationships in occupation and class_of_worker motivate this stage |
+
+Ridge produced no improvement over the baseline — documented in `docs/decision_log.md` DL-006. Linear model ceiling reached at AUC 0.91. XGBoost is evaluated based on near-zero linear coefficients for occupation and class_of_worker, suggesting non-linear signal those features carry that logistic regression cannot capture.
 
 ---
 
@@ -74,7 +76,7 @@ This pipeline treats fairness as an engineering requirement, not a checkbox.
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                      TRAINING LAYER                         │
-│  OLS → Ridge → XGBoost  |  Optuna hyperparameter tuning     │
+│  Logistic Regression → Ridge → XGBoost  |  Optuna tuning    │
 │  MLflow experiment tracking  |  SHAP explainability         │
 │  Fairness audit report generated per run                    │
 └──────────────────────────┬──────────────────────────────────┘
@@ -134,12 +136,12 @@ responsible-mlops-risk-engine/
 ├── src/
 │   ├── data/
 │   │   ├── ingest.py        # ACS Census API download
-│   │   ├── preprocess.py    # Feature engineering
-│   │   └── validate.py      # Great Expectations checks
+│   │   ├── preprocess.py    # Feature engineering and train/test split
+│   │   └── validate.py      # Great Expectations schema checks
 │   ├── training/
-│   │   ├── baseline.py      # OLS logistic regression
-│   │   ├── ridge.py         # Ridge regression
-│   │   ├── train.py         # XGBoost + Optuna
+│   │   ├── baseline.py      # Logistic Regression baseline
+│   │   ├── ridge.py         # Ridge Logistic Regression (L2)
+│   │   ├── xgboost.py       # XGBoost + Optuna hyperparameter tuning
 │   │   ├── evaluate.py      # Metrics + fairness audit
 │   │   └── register.py      # MLflow model registry
 │   ├── serving/
@@ -156,6 +158,8 @@ responsible-mlops-risk-engine/
 ├── notebooks/               # Exploratory analysis
 ├── tests/                   # Unit + integration tests
 ├── .github/workflows/       # CI/CD GitHub Actions
+├── .env.example             # Environment variable template
+├── config.py                # Central pipeline configuration
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
@@ -176,7 +180,7 @@ Every push to `main` triggers:
 7. **Manual approval** — production deployment requires explicit human sign-off
 8. **Deploy** — SageMaker endpoint promotion upon approval
 
-> **Note on deployment:** The final SageMaker deployment step requires manual approval. In government delivery environments, production deployments require human sign-off regardless of automated test results. A model that passes the AUC gate but fails the fairness audit does not proceed to approval.
+In government delivery environments, production deployments require human sign-off regardless of automated test results. A model that passes the AUC gate but fails the fairness audit does not proceed to approval.
 
 ---
 
@@ -189,7 +193,6 @@ All AWS resources are provisioned via Terraform — nothing is created manually 
 - `terraform plan` output is committed to the repo for every change
 - `terraform destroy` tears down everything cleanly with one command
 
-To preview all infrastructure without deploying:
 ```bash
 cd infrastructure
 terraform init
@@ -211,14 +214,15 @@ Official government microdata representing approximately 3.5 million individuals
 | SCHL | Categorical | Educational attainment |
 | OCCP | Categorical | Occupation code |
 | WKHP | Continuous | Hours worked per week |
-| WAGP | Continuous | Wage and salary income — **TARGET** |
+| WAGP | Continuous | Wage and salary income — **TARGET SOURCE** |
 | COW | Categorical | Class of worker |
 | MAR | Categorical | Marital status |
+| PWGTP | Continuous | Census sampling weight — XGBoost sample_weight only, not a model input |
 | RAC1P | Categorical | Race — **SENSITIVE: fairness audit only** |
 | SEX | Categorical | Sex — **SENSITIVE: fairness audit only** |
 | NATIVITY | Categorical | Native or foreign born — **SENSITIVE: fairness audit only** |
 
-Sensitive features are never used as model inputs. They are preserved separately for post-prediction fairness analysis only.
+Sensitive features are never used as model inputs. They are preserved separately for post-prediction fairness analysis only. `PWGTP` is a Census survey methodology artifact — not a personal characteristic. It is passed as `sample_weight` during XGBoost training to produce population-representative predictions.
 
 ---
 
@@ -227,12 +231,14 @@ Sensitive features are never used as model inputs. They are preserved separately
 | Decision | Rationale |
 |---|---|
 | ACS PUMS 2023 | Official U.S. Census Bureau microdata — current, government-sourced, 3.5M records |
-| OLS → Ridge → XGBoost progression | Justified complexity — each step documented with metrics in decision log |
+| Logistic Regression → Ridge → XGBoost | Justified complexity — each transition documented with metrics in decision log |
+| person_weight as sample_weight not feature | Census sampling artifact — passed to XGBoost for population representativeness, not used as a model input |
 | Fairness gate in CI/CD | Demographic audit is a deployment requirement, not optional |
 | Manual approval for SageMaker deploy | Reflects government delivery standard — production requires human sign-off |
 | Terraform over CDK | Cloud-agnostic IaC — same workflow applicable to GCP/Azure |
 | 100% data capture on endpoint | Government auditability requirement — full prediction history preserved |
 | Sensitive features separated at ingest | Prevents proxy discrimination, enables clean fairness reporting |
+| config.py as single source of truth | All pipeline parameters in one place — environment-specific secrets in .env |
 
 ---
 
@@ -240,7 +246,7 @@ Sensitive features are never used as model inputs. They are preserved separately
 
 - [ ] GitHub repo with full CI/CD pipeline
 - [ ] Terraform plan output for all AWS infrastructure
-- [ ] MLflow experiment comparison across OLS, Ridge, XGBoost
+- [ ] MLflow experiment comparison — Logistic Regression, Ridge, XGBoost
 - [ ] Fairness audit report across demographic groups
 - [ ] NIST AI RMF alignment document
 - [ ] Decision log structured for auditor review
@@ -266,8 +272,19 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Copy environment template and fill in values
+cp .env.example .env
+
 # Configure AWS
 aws configure
+
+# Run the pipeline
+export PYTHONPATH=.
+python3 src/data/ingest.py
+python3 src/data/preprocess.py
+python3 src/training/baseline.py
+python3 src/training/ridge.py
+python3 src/training/xgboost.py
 
 # Preview infrastructure (no cost)
 cd infrastructure && terraform init && terraform plan
