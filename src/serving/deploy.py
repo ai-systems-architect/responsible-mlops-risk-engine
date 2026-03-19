@@ -32,7 +32,6 @@ import os
 import logging
 import tarfile
 import joblib
-import numpy as np
 import pandas as pd
 import boto3
 import sagemaker
@@ -41,9 +40,6 @@ from sagemaker.xgboost.model import XGBoostModel
 from sagemaker.serializers import CSVSerializer
 from sagemaker.deserializers import CSVDeserializer
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from config import (
     SAGEMAKER_ENDPOINT_NAME,
     SAGEMAKER_INSTANCE,
@@ -53,6 +49,8 @@ from config import (
     AWS_REGION,
     PROCESSED_DATA_DIR,
 )
+
+load_dotenv()
 
 # --- Logging ---
 logging.basicConfig(
@@ -92,7 +90,6 @@ def create_inference_script():
     Script is packaged into model.tar.gz alongside the model file.
     """
     script = """import joblib
-import numpy as np
 import os
 
 
