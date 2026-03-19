@@ -149,6 +149,18 @@ data "aws_iam_policy_document" "sagemaker_s3_access" {
     ]
   }
 
+  # Default SageMaker S3 bucket — SDK uploads inference scripts here during deployment
+  statement {
+    sid     = "S3DefaultSageMakerBucket"
+    effect  = "Allow"
+    actions = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+
+    resources = [
+      "arn:aws:s3:::sagemaker-${var.aws_region}-${var.aws_account_id}",
+      "arn:aws:s3:::sagemaker-${var.aws_region}-${var.aws_account_id}/*",
+    ]
+  }
+
   # Write access to model artifacts — required for SageMaker training jobs
   statement {
     sid     = "S3WriteModelArtifacts"
