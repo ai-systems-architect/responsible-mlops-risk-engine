@@ -43,3 +43,11 @@ data/
 models/
 mlruns/
 reports/
+
+# Model artifacts — local only
+models/xgboost_native.json
+
+# Logs
+*.log
+logs/
+mlartifacts/
