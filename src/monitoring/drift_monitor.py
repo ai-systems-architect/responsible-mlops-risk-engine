@@ -22,10 +22,8 @@ NIST AI RMF alignment:
 
 import os
 import logging
-import json
 import boto3
 import pandas as pd
-import numpy as np
 from glob import glob
 from datetime import datetime, timezone
 
@@ -41,7 +39,6 @@ from config import (
     MODEL_FEATURES,
     PROCESSED_DATA_DIR,
     AWS_REGION,
-    FAIRNESS_THRESHOLD,
 )
 
 # --- Logging ---
@@ -270,8 +267,8 @@ def print_drift_report(results: dict) -> None:
     print("Drift Monitor — Results")
     print("=" * 55)
     print(f"Timestamp:          {results['timestamp']}")
-    print(f"Reference dataset:  X_train (training distribution)")
-    print(f"Current dataset:    X_test  (simulated production data)")
+    print("Reference dataset:  X_train (training distribution)")
+    print("Current dataset:    X_test  (simulated production data)")
     print(f"Features monitored: {results['n_features']}")
     print()
 
