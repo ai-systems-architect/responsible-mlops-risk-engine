@@ -156,3 +156,55 @@ requirements are established for production deployment:
 - Document American Indian group metrics after national pull
 
 ---
+## DL-010 — SageMaker Python SDK Pinned to 2.x
+**Date:** 2026-03-19
+**Decision:** SageMaker SDK constrained to `>=2.200.0,<3.0.0` in requirements.txt
+**Rationale:** SageMaker 3.x (released early 2026) is a complete API rewrite.
+All framework-specific classes — XGBoostModel, SKLearnModel, XGBoostPredictor —
+were removed and replaced with unified ModelBuilder and ModelTrainer classes.
+Version 3.x is too new and poorly documented for production use. Version 2.257.1
+is the stable, well-documented version used across all production pipelines.
+
+---
+
+## DL-011 — Native XGBoost Format for SageMaker Deployment
+**Date:** 2026-03-19
+**Decision:** Model saved in XGBoost native JSON format for SageMaker deployment
+**Rationale:** The joblib-serialized XGBClassifier (sklearn API) repeatedly failed
+in the SageMaker XGBoost container due to container behavior — the container always
+runs `pip install .` on any code directory it finds, then attempts to import the
+installed package. This caused import failures regardless of script naming.
+
+The native XGBoost JSON format eliminates the need for a custom inference script
+entirely. The container loads the model directly with no pip install, no import
+issues, and no script management. The joblib artifact is retained locally for
+MLflow logging and Streamlit inference.
+
+Conversion:
+```python
+model.get_booster().save_model('models/xgboost_native.json')
+```
+
+**Result:** Endpoint reached InService in 4 minutes. All predictions consistent
+with local model — delta < 0.001 across all test records.
+
+---
+
+## DL-012 — National Data Pull Deferred to Production
+**Date:** 2026-03-19
+**Decision:** Pipeline developed and deployed on Virginia (FIPS 51) data only.
+National retrain deferred.
+**Rationale:** Virginia data (88,928 records) provides sufficient volume for
+development iteration and model validation. The full pipeline — ingestion,
+preprocessing, training, fairness audit, MLflow registry, and SageMaker deployment
+— is proven end-to-end on Virginia data.
+
+National retrain requires one configuration change:
+```python
+STATE_CODE = "*"  # config.py — pulls ~1.5M records across all 50 states
+```
+
+This is the documented production path. Federal pilots always start with a state
+before going national — this approach reflects real government delivery practice.
+
+---
