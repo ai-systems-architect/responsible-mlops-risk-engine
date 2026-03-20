@@ -330,5 +330,5 @@ National data pull activated by setting `STATE_CODE = "*"` in `config.py`.
 ---
 
 *This document reflects the Virginia (FIPS 51) development pipeline.
-A full NIST alignment review will be conducted after national data pull
-and production deployment approval.*
+National expansion to STATE_CODE="*" is the documented production path.
+A full NIST alignment review is recommended before national deployment.*

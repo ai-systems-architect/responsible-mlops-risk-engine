@@ -152,7 +152,7 @@ The following actions are required before and during production deployment:
 
 | Action | Trigger | Owner |
 |---|---|---|
-| Re-run full fairness audit on national data | Before deployment approval | ML team |
+| Re-run full fairness audit if expanded to national data | Before national deployment | ML team |
 | Flag American Indian group for priority review | After national data pull | ML team |
 | Monitor per-group PPR drift monthly | Post-deployment | Evidently AI / drift_monitor.py |
 | Alert threshold set at ±0.15 PPR delta | Tighter than gate — early warning | CloudWatch |
@@ -186,5 +186,5 @@ The following actions are required before and during production deployment:
 ---
 
 *This report was generated automatically by src/training/evaluate.py
-and reviewed manually. Results are specific to Virginia development data.
-A national data audit is required before production deployment.*
+and reviewed manually. Results are specific to Virginia (FIPS 51) development data.
+National expansion requires a full fairness audit on the complete ACS PUMS dataset.*
