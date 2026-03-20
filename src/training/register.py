@@ -27,11 +27,13 @@ NIST AI RMF alignment:
 
 import logging
 import mlflow
+import mlflow.sklearn
 import mlflow.xgboost
 import pandas as pd
 from glob import glob
 from mlflow.models.signature import infer_signature
 
+from src.data.preprocess import ACSPreprocessor  # noqa: F401 — required for pipeline joblib load
 from config import (
     MLFLOW_EXPERIMENT_NAME,
     MLFLOW_TRACKING_URI,
@@ -158,9 +160,8 @@ def register_model(
     # --- Load artifacts ---
     X_test, y_test, sensitive_df, model = load_artifacts(data_dir, models_dir)
 
-    # Locate encoder and scaler artifacts
-    encoder_path = sorted(glob(f"{data_dir}/encoders_*.joblib"))[-1]
-    scaler_path = sorted(glob(f"{data_dir}/scaler_*.joblib"))[-1]
+    # Locate full pipeline artifact — preprocessor + model bundled together
+    pipeline_path = sorted(glob(f"{models_dir}/full_pipeline_*.joblib"))[-1]
 
     # Drop person_weight — not a model input
     X_test = X_test.drop(columns=["person_weight"], errors="ignore")
@@ -192,9 +193,16 @@ def register_model(
     fairness_metrics = flatten_fairness_for_mlflow(fairness_df)
 
     # --- Model signature ---
-    # Captures input feature schema and output probability schema.
-    # SageMaker enforces this at inference time — mismatched inputs are rejected.
-    signature = infer_signature(X_test, model.predict_proba(X_test))
+    # Built from raw feature names — pipeline accepts raw inputs
+    # so signature reflects what callers actually send.
+    import pandas as _pd
+    raw_example = _pd.DataFrame([{
+        "age": 45, "education": "20", "occupation": "0010",
+        "hours_per_week": 55, "class_of_worker": "5", "marital_status": "1",
+    }])
+    import joblib as _jl
+    full_pipeline = _jl.load(pipeline_path)
+    signature = infer_signature(raw_example, full_pipeline.predict_proba(raw_example))
 
     # --- MLflow run ---
     with mlflow.start_run(run_name="xgboost-production") as run:
@@ -238,17 +246,17 @@ def register_model(
         # Fairness metrics — full per-group breakdown
         mlflow.log_metrics(fairness_metrics)
 
-        # Model artifact with signature
-        mlflow.xgboost.log_model(
-            model,
-            artifact_path="model",
+        # Log full pipeline as primary artifact — preprocessor + model bundled
+        # Raw inputs in, predictions out — no separate preprocessing artifacts needed
+        mlflow.sklearn.log_model(
+            full_pipeline,
+            artifact_path="pipeline",
             signature=signature,
-            input_example=X_test.iloc[:5],
+            input_example=raw_example,
         )
 
-        # Preprocessing artifacts — required for inference reproducibility
-        mlflow.log_artifact(encoder_path, artifact_path="preprocessing")
-        mlflow.log_artifact(scaler_path, artifact_path="preprocessing")
+        # Also log pipeline artifact file for direct download
+        mlflow.log_artifact(pipeline_path, artifact_path="pipeline_artifact")
 
         # Fairness report as artifact — keeps everything in one run
         mlflow.log_artifact(
@@ -260,7 +268,7 @@ def register_model(
 
     # --- Register in Model Registry ---
     model_name = "income-risk-xgboost"
-    model_uri = f"runs:/{run_id}/model"
+    model_uri = f"runs:/{run_id}/pipeline"
 
     registered = mlflow.register_model(
         model_uri=model_uri,
