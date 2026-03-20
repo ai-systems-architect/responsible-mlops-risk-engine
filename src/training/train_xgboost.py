@@ -48,7 +48,7 @@ from sklearn.metrics import (
     classification_report,
 )
 
-from src.data.preprocess import ACSPreprocessor
+from src.data.preprocess import ACSPreprocessor  # noqa: F401 — required for joblib pipeline deserialization
 from config import (
     RANDOM_STATE,
     OPTUNA_TRIALS_LOCAL,

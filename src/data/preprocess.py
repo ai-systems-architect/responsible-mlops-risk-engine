@@ -343,8 +343,6 @@ def save_processed(
     logger.info(f"All processed artifacts saved to: {output_dir}/")
 
 
-
-
 class ACSPreprocessor(BaseEstimator, TransformerMixin):
     """
     Sklearn-compatible transformer that wraps the fitted encoders and scaler.
@@ -393,7 +391,6 @@ class ACSPreprocessor(BaseEstimator, TransformerMixin):
             numpy array in FEATURE_ORDER, ready for model.predict_proba()
         """
         import pandas as pd
-        import numpy as np
 
         df = pd.DataFrame(X).copy()
 
