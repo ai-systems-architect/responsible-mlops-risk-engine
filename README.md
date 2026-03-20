@@ -1,228 +1,146 @@
 # responsible-mlops-risk-engine
 
-> Production-grade MLOps pipeline for income-based risk scoring using 2023 ACS Census data.
-> NIST AI RMF aligned | Demographic Fairness Audits | AWS SageMaker | Terraform IaC
+> Production-grade MLOps pipeline for income-based risk scoring on 2023 U.S. Census data.
+> NIST AI RMF 1.0 aligned | Demographic fairness audits | AWS SageMaker | Terraform IaC
 
 ---
 
-## Overview
+## What This Is
 
-This project implements a complete, auditable machine learning pipeline for income-based risk scoring using the **2023 American Community Survey (ACS) Public Use Microdata Sample (PUMS)** — official U.S. Census Bureau data representing approximately 3.5 million individuals.
+A complete, auditable MLOps pipeline for income-based risk scoring built on
+the 2023 American Community Survey Public Use Microdata Sample — official
+U.S. Census Bureau data. The pipeline covers the full lifecycle: data
+ingestion through model deployment, with demographic fairness enforcement
+and drift monitoring built in as first-class requirements.
 
-Built to meet the standards expected in federal and government delivery environments, this system emphasizes **responsible AI practices**, **reproducible infrastructure**, and **auditability at every stage** as first-class design requirements.
-
----
-
-## Background & Design Philosophy
-
-Federal and government ML systems require more than accurate models. They require auditability, fairness documentation, reproducible infrastructure, and alignment with risk management frameworks. This project is built to those standards from day one.
-
-- Model selection documented with metrics and tradeoffs at each stage — Logistic Regression, Ridge, then XGBoost
-- Demographic fairness audits integrated into the training and deployment pipeline as a first-class requirement
-- Decision log structured for auditor and inspector general review
-- Infrastructure versioned and reproducible via Terraform — no manual console steps
-- Alignment with NIST AI Risk Management Framework (AI RMF 1.0) from initial design
+Built to the standards I apply in federal and government delivery
+environments: auditability at every stage, reproducible infrastructure,
+and alignment with NIST AI RMF 1.0 from day one.
 
 ---
 
-## NIST AI RMF Alignment
+## Why This Dataset
 
-This pipeline maps directly to the four NIST AI RMF core functions:
-
-| NIST Function | Implementation in This Project |
-|---|---|
-| **GOVERN** | Decision log, model cards, stakeholder impact documentation |
-| **MAP** | Risk identification across demographic groups, use case scoping |
-| **MEASURE** | SHAP explainability, fairness metrics, drift monitoring via Evidently AI |
-| **MANAGE** | Automated retraining triggers, champion-challenger deployment, MLflow model registry |
+Most income classification projects use the 1994 UCI Adult Census dataset.
+That data is over 30 years old. The 2023 ACS PUMS is official Census Bureau
+microdata released annually — current, government-sourced, and representative
+of today's labor market. The income threshold here is $75,000, which
+approximates the 2023 U.S. median household income, not the 1994 $50K figure
+still used in most portfolio reproductions.
 
 ---
 
-## Model Progression — Justified Complexity
+## Model Progression
 
-Rather than jumping directly to the most complex model, this project follows a principled progression with each transition documented in the **Decision Log** (`docs/decision_log.md`).
-
-Complexity is earned — each stage is only justified if it demonstrates meaningful improvement over the previous one.
+Complexity is earned at each stage. Every transition is documented in
+`docs/decision_log.md` with the specific metric delta that justified it.
 
 | Stage | Model | AUC-ROC | F1 | Notes |
 |---|---|---|---|---|
-| **Baseline** | Logistic Regression | 0.9108 | 0.6508 | Fully interpretable coefficients — strong baseline |
-| **Regularized** | Ridge (L2) | 0.9108 | 0.6507 | CV selected C=100 — no regularization benefit on this dataset |
-| **Production** | XGBoost + Optuna | 0.9506 | 0.7633 | occupation ranked 2nd, class_of_worker 4th in feature importance — non-linear signal confirmed |
+| Baseline | Logistic Regression | 0.9108 | 0.6508 | Strong interpretable baseline |
+| Regularized | Ridge (L2) | 0.9108 | 0.6507 | CV selected C=100 — no regularization benefit |
+| Production | XGBoost + Optuna | 0.9506 | 0.7633 | +4.4% AUC, +17.3% F1 over baseline |
 
-Ridge produced no improvement over the baseline — documented in `docs/decision_log.md` DL-006. Linear model ceiling reached at AUC 0.91. XGBoost is evaluated based on near-zero linear coefficients for occupation and class_of_worker, suggesting non-linear signal those features carry that logistic regression cannot capture.
+Ridge produced no improvement — cross-validation selected the weakest
+available regularization, confirming the features are sufficiently
+independent. The linear model ceiling at AUC 0.91 justified moving to
+XGBoost.
+
+XGBoost confirmed the non-linear signal hypothesis from the baseline:
+`occupation` had near-zero linear signal (-0.005) but ranked 2nd in
+XGBoost feature importance (0.17). `class_of_worker` showed the same
+pattern. These features carry interaction effects that logistic regression
+cannot capture.
+
+XGBoost best parameters (Optuna, 30 trials): n_estimators 403, max_depth 5,
+learning_rate 0.043, scale_pos_weight 2.43.
 
 ---
 
-## Demographic Fairness Audits
+## Fairness Audit
 
-This pipeline treats fairness as an engineering requirement, not a checkbox.
+Sensitive features — race, sex, nativity — are physically separated from
+model inputs at preprocessing and used exclusively for post-prediction
+fairness analysis. The model has no access to protected attributes.
 
-- **Sensitive features tracked separately** — race, sex, and nativity are never used as model inputs but are preserved for fairness analysis throughout the pipeline
-- **Disparate impact analysis** — model performance (precision, recall, AUC) computed and compared across demographic groups after every training run
-- **SHAP group analysis** — feature importance compared across demographic segments to identify proxy discrimination
-- **Audit report generated automatically** — every training run produces a fairness report logged to MLflow and stored in S3
+**Gate: PASSED** — all groups within ±0.20 positive prediction rate threshold.
+**Overall PPR:** 0.2686
+
+| Group | N | PPR | Delta | AUC |
+|---|---|---|---|---|
+| White alone | 9,685 | 0.279 | 0.010 | 0.954 |
+| Black or African American alone | 2,086 | 0.171 | 0.098 | 0.920 |
+| American Indian alone | 68 | 0.353 | 0.084 | 0.909 |
+| Asian alone | 1,059 | 0.413 | 0.144 | 0.952 |
+| Some other race alone | 448 | 0.167 | 0.101 | 0.941 |
+| Two or more races | 1,044 | 0.263 | 0.005 | 0.948 |
+| Male | 6,929 | 0.321 | 0.053 | 0.946 |
+| Female | 7,478 | 0.220 | 0.049 | 0.954 |
+| Native born | 12,445 | 0.260 | 0.009 | 0.951 |
+| Foreign born | 1,962 | 0.324 | 0.055 | 0.949 |
+
+The fairness gate is enforced in CI/CD — `evaluate.py` exits with code 1
+on failure, blocking all downstream deployment steps. Full findings and
+risk response commitments in `docs/fairness_report.md`.
+
+---
+
+## NIST AI RMF 1.0 Alignment
+
+| Function | Implementation |
+|---|---|
+| GOVERN | Decision log DL-001 to DL-012, sensitive feature separation, MLflow lineage |
+| MAP | Risk identification table, use case scoping, impact assessment per demographic group |
+| MEASURE | Per-group PPR and AUC, fairness gate in CI/CD, Evidently AI drift monitoring |
+| MANAGE | Multi-stage deployment approval, retraining triggers, CloudWatch alarms |
+
+Full control mapping in `docs/nist_alignment.md`.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        DATA LAYER                           │
-│  ACS PUMS 2023 (Census API) → S3 (raw) → S3 (processed)     │
-│  DVC tracks all dataset versions                            │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                      TRAINING LAYER                         │
-│  Logistic Regression → Ridge → XGBoost  |  Optuna tuning    │
-│  MLflow experiment tracking  |  SHAP explainability         │
-│  Fairness audit report generated per run                    │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                       CI/CD LAYER                           │
-│  GitHub Actions → lint → test → validate metrics            │
-│  Fairness gate → Manual approval → SageMaker deployment     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                      SERVING LAYER                          │
-│  SageMaker Real-Time Endpoint  |  API Gateway  |  Lambda    │
-│  100% data capture to S3 for auditability                   │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────────────┐
-│                    MONITORING LAYER                         │
-│  Evidently AI drift detection (daily)                       │
-│  CloudWatch alarms  |  EventBridge → Lambda retraining      │
-│  Delayed label evaluation  |  Champion-challenger A/B       │
-└─────────────────────────────────────────────────────────────┘
+Census API → ingest.py → data/raw/
+                │
+          preprocess.py → data/processed/
+                │
+    ┌───────────┴───────────┐
+    │                       │
+ X_train/y_train      X_test/y_test + sensitive_*.parquet
+    │
+baseline.py → ridge.py → train_xgboost.py (Optuna)
+                                │
+                          models/*.joblib
+                          models/*.json (native — SageMaker)
+                                │
+                          evaluate.py (metrics + fairness gate)
+                                │
+                          register.py (MLflow registry)
+                                │
+                          deploy.py → S3 → SageMaker endpoint
+                                │
+                    drift_monitor.py → Evidently AI → CloudWatch
 ```
 
 ---
 
-## Tech Stack
+## Infrastructure
 
-| Category | Technology |
-|---|---|
-| **Cloud** | AWS (SageMaker, S3, Lambda, EventBridge, ECR, CloudWatch, IAM) |
-| **IaC** | Terraform v1.5+ |
-| **ML Framework** | XGBoost, Scikit-learn |
-| **Experiment Tracking** | MLflow |
-| **Drift Monitoring** | Evidently AI |
-| **Explainability** | SHAP |
-| **Hyperparameter Tuning** | Optuna |
-| **CI/CD** | GitHub Actions |
-| **Data Versioning** | DVC |
-| **Demo UI** | Streamlit |
-| **Dataset** | ACS PUMS 2023 (U.S. Census Bureau) |
-
----
-
-## Project Structure
-
-```
-responsible-mlops-risk-engine/
-├── infrastructure/          # Terraform — all AWS resources
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── modules/
-│       ├── sagemaker/
-│       ├── monitoring/
-│       └── networking/
-├── src/
-│   ├── data/
-│   │   ├── ingest.py        # ACS Census API download
-│   │   ├── preprocess.py    # Feature engineering and train/test split
-│   │   └── validate.py      # Great Expectations schema checks
-│   ├── training/
-│   │   ├── baseline.py      # Logistic Regression baseline
-│   │   ├── ridge.py         # Ridge Logistic Regression (L2)
-│   │   ├── train_xgboost.py # XGBoost + Optuna hyperparameter tuning
-│   │   ├── evaluate.py      # Metrics + fairness audit
-│   │   └── register.py      # MLflow model registry
-│   ├── serving/
-│   │   ├── inference.py     # SageMaker inference handler
-│   │   └── deploy.py        # Endpoint deployment
-│   └── monitoring/
-│       ├── drift_monitor.py # Evidently AI drift reports
-│       └── retrain_trigger.py
-├── docs/
-│   ├── decision_log.md      # Every model decision justified
-│   ├── architecture.md      # System design document
-│   ├── fairness_report.md   # Demographic audit findings
-│   └── nist_alignment.md   # NIST AI RMF mapping
-├── notebooks/               # Exploratory analysis
-├── tests/                   # Unit + integration tests
-├── .github/workflows/       # CI/CD GitHub Actions
-├── .env.example             # Environment variable template
-├── config.py                # Central pipeline configuration
-├── Dockerfile
-├── requirements.txt
-└── README.md
-```
-
----
-
-## CI/CD Pipeline
-
-Every push to `main` triggers:
-
-1. **Lint** — flake8 code quality check
-2. **Unit tests** — pytest across all modules
-3. **Data validation** — schema and null rate checks
-4. **Model training** — full pipeline run
-5. **Metrics gate** — AUC threshold must be met
-6. **Fairness gate** — disparate impact ratio must be within acceptable bounds
-7. **Manual approval** — production deployment requires explicit human sign-off
-8. **Deploy** — SageMaker endpoint promotion upon approval
-
-In government delivery environments, production deployments require human sign-off regardless of automated test results. A model that passes the AUC gate but fails the fairness audit does not proceed to approval.
-
----
-
-## Infrastructure as Code
-
-All AWS resources are provisioned via Terraform — nothing is created manually through the console. This ensures:
-
-- Full reproducibility across dev, staging, and production environments
-- Infrastructure changes are code-reviewed like application code
-- `terraform plan` output is committed to the repo for every change
-- `terraform destroy` tears down everything cleanly with one command
+All AWS resources provisioned via Terraform — nothing created manually
+through the console. `infrastructure/main.tf` provisions S3 buckets,
+SageMaker IAM role with least-privilege policy, and CloudWatch alarms
+for endpoint availability, error rate, and p99 latency.
 
 ```bash
 cd infrastructure
 terraform init
-terraform plan -out=tfplan
+terraform plan -var="aws_account_id=YOUR_ACCOUNT_ID"
+terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
 ```
 
----
-
-## Dataset
-
-**American Community Survey (ACS) Public Use Microdata Sample (PUMS) — 2023**
-Source: U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
-
-Official government microdata representing approximately 3.5 million individuals across the United States. Released annually and used by federal agencies, research institutions, and policy organizations for demographic and economic analysis.
-
-| Feature | Type | Notes |
-|---|---|---|
-| AGE | Continuous | Age of individual |
-| SCHL | Categorical | Educational attainment |
-| OCCP | Categorical | Occupation code |
-| WKHP | Continuous | Hours worked per week |
-| WAGP | Continuous | Wage and salary income — **TARGET SOURCE** |
-| COW | Categorical | Class of worker |
-| MAR | Categorical | Marital status |
-| PWGTP | Continuous | Census sampling weight — XGBoost sample_weight only, not a model input |
-| RAC1P | Categorical | Race — **SENSITIVE: fairness audit only** |
-| SEX | Categorical | Sex — **SENSITIVE: fairness audit only** |
-| NATIVITY | Categorical | Native or foreign born — **SENSITIVE: fairness audit only** |
-
-Sensitive features are never used as model inputs. They are preserved separately for post-prediction fairness analysis only. `PWGTP` is a Census survey methodology artifact — not a personal characteristic. It is passed as `sample_weight` during XGBoost training to produce population-representative predictions.
+Standing cost: ~$0.30/month (CloudWatch alarms only). SageMaker endpoint
+costs ~$5/day — deployed on demand and destroyed immediately after use.
 
 ---
 
@@ -230,66 +148,115 @@ Sensitive features are never used as model inputs. They are preserved separately
 
 | Decision | Rationale |
 |---|---|
-| ACS PUMS 2023 | Official U.S. Census Bureau microdata — current, government-sourced, 3.5M records |
-| Logistic Regression → Ridge → XGBoost | Justified complexity — each transition documented with metrics in decision log |
-| person_weight as sample_weight not feature | Census sampling artifact — passed to XGBoost for population representativeness, not used as a model input |
-| Fairness gate in CI/CD | Demographic audit is a deployment requirement, not optional |
-| Manual approval for SageMaker deploy | Reflects government delivery standard — production requires human sign-off |
-| Terraform over CDK | Cloud-agnostic IaC — same workflow applicable to GCP/Azure |
-| 100% data capture on endpoint | Government auditability requirement — full prediction history preserved |
-| Sensitive features separated at ingest | Prevents proxy discrimination, enables clean fairness reporting |
-| config.py as single source of truth | All pipeline parameters in one place — environment-specific secrets in .env |
+| ACS PUMS 2023 over UCI Adult | Current government data — income threshold and demographics reflect 2023, not 1994 |
+| person_weight as sample_weight | Census sampling artifact — passed to XGBoost for population representativeness, not a model input |
+| Fairness gate in CI/CD | Demographic audit is a deployment requirement, not a report |
+| Native XGBoost JSON format for SageMaker | Eliminates container script-loading issues — booster loaded directly, no custom inference script needed |
+| SageMaker SDK pinned to 2.x | SDK 3.x is a complete API rewrite released early 2026 — too new for production use |
+| Virginia for development | 88,928 records — fast iteration. National retrain is one config change: STATE_CODE="*" |
+| Manual deployment approval | Reflects government delivery standard — CI/CD gates are necessary but not sufficient |
+| config.py as single source of truth | All parameters in one place — no hardcoded values in pipeline code |
+
+---
+
+## Project Structure
+
+```
+responsible-mlops-risk-engine/
+├── config.py                     # All pipeline parameters
+├── .env.example                  # Credential template
+├── requirements.txt              # Dependencies
+├── PORTFOLIO.md                  # Portfolio overview
+├── src/
+│   ├── data/
+│   │   ├── ingest.py             # ACS Census API pull
+│   │   └── preprocess.py        # Feature engineering, split
+│   ├── training/
+│   │   ├── baseline.py          # Logistic Regression
+│   │   ├── ridge.py             # Ridge with L2
+│   │   ├── train_xgboost.py     # XGBoost + Optuna
+│   │   ├── evaluate.py          # Metrics + fairness gate
+│   │   └── register.py          # MLflow registry
+│   ├── serving/
+│   │   └── deploy.py            # SageMaker deployment
+│   └── monitoring/
+│       └── drift_monitor.py     # Evidently AI + CloudWatch
+├── infrastructure/
+│   ├── main.tf                  # S3, IAM, CloudWatch
+│   ├── variables.tf
+│   └── outputs.tf
+└── docs/
+    ├── decision_log.md          # DL-001 through DL-012
+    ├── fairness_report.md       # Stakeholder fairness audit
+    ├── nist_alignment.md        # NIST AI RMF 1.0 mapping
+    └── architecture.md          # System design
+```
 
 ---
 
 ## Deliverables
 
-- [ ] GitHub repo with full CI/CD pipeline
-- [ ] Terraform plan output for all AWS infrastructure
-- [ ] MLflow experiment comparison — Logistic Regression, Ridge, XGBoost
-- [ ] Fairness audit report across demographic groups
-- [ ] NIST AI RMF alignment document
-- [ ] Decision log structured for auditor review
-- [ ] Live SageMaker endpoint (screenshot + curl demo)
-- [ ] Evidently AI drift report
-- [ ] Streamlit demo application
-- [ ] Architecture document
+- ✅ End-to-end MLOps pipeline — ingest through deployment
+- ✅ Three-model progression with documented justification
+- ✅ Fairness audit — 10 demographic groups, CI/CD gate
+- ✅ MLflow experiment tracking — full artifact bundle
+- ✅ Terraform IaC — S3, IAM, CloudWatch
+- ✅ SageMaker real-time endpoint — deployed and verified
+- ✅ Evidently AI drift monitoring — CloudWatch metrics
+- ✅ NIST AI RMF 1.0 alignment document
+- ✅ Decision log — DL-001 through DL-012
+- ⬜ Streamlit demo
 
 ---
 
 ## Local Setup
 
 ```bash
-# Clone the repo
 git clone https://github.com/ai-systems-architect/responsible-mlops-risk-engine.git
 cd responsible-mlops-risk-engine
 
-# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
-pip install --upgrade pip
 pip install -r requirements.txt
 
-# Copy environment template and fill in values
 cp .env.example .env
+# Fill in CENSUS_API_KEY, AWS_ACCOUNT_ID, S3_BUCKET, SAGEMAKER_ROLE_ARN
 
-# Configure AWS
 aws configure
+export PYTHONPATH=.
 
 # Run the pipeline
-export PYTHONPATH=.
 python3 src/data/ingest.py
 python3 src/data/preprocess.py
 python3 src/training/baseline.py
 python3 src/training/ridge.py
 python3 src/training/train_xgboost.py
+python3 src/training/evaluate.py
+python3 src/training/register.py  # requires: mlflow ui running
 
-# Preview infrastructure (no cost)
-cd infrastructure && terraform init && terraform plan
+# Infrastructure (no cost until apply)
+cd infrastructure
+terraform init
+terraform plan -var="aws_account_id=YOUR_ACCOUNT_ID"
 ```
 
 ---
 
-*Built to federal delivery standards. NIST AI RMF 1.0 aligned. Demographic fairness audits built in from day one.*
+## Dataset
+
+American Community Survey (ACS) Public Use Microdata Sample — 2023
+U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
+
+88,928 Virginia records used for development. National expansion requires
+one config change: `STATE_CODE = "*"` in `config.py`.
+
+---
+
+## Tech Stack
+
+Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
+SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
+
+---
+
+*NIST AI RMF 1.0 aligned. Demographic fairness audits built in from day one.*
