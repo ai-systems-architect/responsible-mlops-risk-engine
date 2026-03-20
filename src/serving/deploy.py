@@ -248,6 +248,9 @@ def run_sample_inference(
             match = "✅" if abs(ep - lp) < 0.05 else "⚠️"
             print(f"  Record {i+1}: endpoint={round(ep,4)} local={round(lp,4)} {match}")
 
+    print("\n  Note: Endpoint receives preprocessed inputs.")
+    print("  Full pipeline (preprocessor + model) used for local/batch inference.")
+
 
 def deploy(
     models_dir: str = MODELS_DIR,

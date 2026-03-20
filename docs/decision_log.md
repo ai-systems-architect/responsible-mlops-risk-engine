@@ -208,3 +208,36 @@ This is the documented production path. Federal pilots always start with a state
 before going national — this approach reflects real government delivery practice.
 
 ---
+## DL-014 — SageMaker Endpoint Receives Preprocessed Inputs
+**Date:** 2026-03-20
+**Decision:** SageMaker endpoint accepts preprocessed inputs. Full sklearn Pipeline
+used client-side (app.py, batch scoring) rather than inside the container.
+**Rationale:** The SageMaker XGBoost managed container can only serve XGBoost's
+native binary/JSON format. It cannot load or run a full sklearn Pipeline object.
+
+The serving architecture is:
+
+```
+Client (app.py / API caller)
+    ↓  raw inputs (age, education codes, occupation codes)
+    ↓  pipeline.named_steps["preprocessor"].transform()
+    ↓  preprocessed CSV
+SageMaker Endpoint
+    ↓  native XGBoost inference
+    ↓  probability score
+Client
+```
+
+The full sklearn Pipeline (`full_pipeline_*.joblib`) is the primary artifact
+for local inference, batch scoring, and the Streamlit demo fallback. The
+SageMaker endpoint is the production serving layer for real-time API calls.
+
+This is the standard pattern for XGBoost on SageMaker. Alternatives considered:
+
+    1. sklearn container — can serve full pipeline but requires custom inference
+       script, which caused repeated container failures (see DL-011).
+    2. Custom container — full control but requires Dockerfile and ECR push,
+       adding infrastructure complexity not justified at this scope.
+    3. Current approach — clean separation of concerns, proven working deployment.
+
+---
