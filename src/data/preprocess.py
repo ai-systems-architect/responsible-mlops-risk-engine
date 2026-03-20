@@ -29,6 +29,7 @@ import os
 import pandas as pd
 import joblib
 import logging
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
 from datetime import datetime
@@ -334,7 +335,86 @@ def save_processed(
     joblib.dump(encoders, f"{output_dir}/encoders_{timestamp}.joblib")
     joblib.dump(scaler, f"{output_dir}/scaler_{timestamp}.joblib")
 
+    # Save ACSPreprocessor — wraps encoders + scaler in one sklearn-compatible
+    # transformer for use in a full sklearn.Pipeline with the XGBoost model
+    preprocessor = ACSPreprocessor(encoders=encoders, scaler=scaler)
+    joblib.dump(preprocessor, f"{output_dir}/preprocessor_{timestamp}.joblib")
+
     logger.info(f"All processed artifacts saved to: {output_dir}/")
+
+
+
+
+class ACSPreprocessor(BaseEstimator, TransformerMixin):
+    """
+    Sklearn-compatible transformer that wraps the fitted encoders and scaler.
+
+    Accepts raw Census input (string categorical codes, numeric age/hours)
+    and returns a preprocessed numpy array in the correct feature order
+    for the XGBoost model.
+
+    This class enables building a full sklearn.Pipeline:
+        Pipeline([('preprocessor', ACSPreprocessor(...)), ('model', xgb)])
+
+    Saving the full pipeline as one artifact eliminates the need for
+    any preprocessing logic in the serving layer or demo app.
+
+    Feature order (matches MODEL_FEATURES minus person_weight):
+        age, education, occupation, hours_per_week,
+        class_of_worker, marital_status
+    """
+
+    # Feature order must match what XGBoost was trained on
+    FEATURE_ORDER = [
+        "age", "education", "occupation",
+        "hours_per_week", "class_of_worker", "marital_status",
+    ]
+    CATEGORICAL = ["education", "occupation", "class_of_worker", "marital_status"]
+    NUMERIC = ["age", "hours_per_week"]
+
+    def __init__(self, encoders: dict, scaler):
+        self.encoders = encoders
+        self.scaler = scaler
+
+    def fit(self, X, y=None):
+        """No-op — encoders and scaler are already fitted during preprocessing."""
+        return self
+
+    def transform(self, X):
+        """
+        Apply encoders and scaler to raw input DataFrame.
+
+        Args:
+            X: DataFrame with raw Census feature values.
+               Categorical columns should be string Census codes.
+               Numeric columns should be raw integers/floats.
+
+        Returns:
+            numpy array in FEATURE_ORDER, ready for model.predict_proba()
+        """
+        import pandas as pd
+        import numpy as np
+
+        df = pd.DataFrame(X).copy()
+
+        # Encode categoricals — pass as strings to match fitted encoder classes
+        # Unseen labels (codes not in Virginia training data) are mapped to 0
+        # to allow inference on national data without errors
+        for col in self.CATEGORICAL:
+            if col in df.columns and col in self.encoders:
+                enc = self.encoders[col]
+                vals = df[col].astype(str)
+                known = set(enc.classes_)
+                vals = vals.apply(lambda v: v if v in known else enc.classes_[0])
+                df[col] = enc.transform(vals)
+
+        # Scale numerics
+        num_cols = [c for c in self.NUMERIC if c in df.columns]
+        if num_cols and self.scaler is not None:
+            df[num_cols] = self.scaler.transform(df[num_cols])
+
+        # Return in correct feature order
+        return df[self.FEATURE_ORDER].values
 
 
 def run_preprocessing(

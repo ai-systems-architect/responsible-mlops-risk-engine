@@ -48,6 +48,7 @@ from sklearn.metrics import (
     classification_report,
 )
 
+from src.data.preprocess import ACSPreprocessor
 from config import (
     RANDOM_STATE,
     OPTUNA_TRIALS_LOCAL,
@@ -274,6 +275,26 @@ def run_xgboost(
     model_path = f"{MODELS_DIR}/xgboost_{timestamp}.joblib"
     joblib.dump(model, model_path)
     logger.info(f"Model saved: {model_path}")
+
+    # --- Save full sklearn Pipeline ---
+    # Wraps ACSPreprocessor + XGBoost into one artifact.
+    # Accepts raw Census input — no preprocessing needed at inference time.
+    # This is the artifact used by app.py and register.py.
+    from sklearn.pipeline import Pipeline
+    from glob import glob as _glob
+
+    preprocessor_files = sorted(_glob(f"{data_dir}/preprocessor_*.joblib"))
+    if preprocessor_files:
+        preprocessor = joblib.load(preprocessor_files[-1])
+        full_pipeline = Pipeline([
+            ("preprocessor", preprocessor),
+            ("model", model),
+        ])
+        pipeline_path = f"{MODELS_DIR}/full_pipeline_{timestamp}.joblib"
+        joblib.dump(full_pipeline, pipeline_path)
+        logger.info(f"Full pipeline saved: {pipeline_path}")
+    else:
+        logger.warning("No preprocessor found — skipping full pipeline save")
 
     # --- Evaluate on held-out test set ---
     y_pred_proba = model.predict_proba(X_test)[:, 1]
