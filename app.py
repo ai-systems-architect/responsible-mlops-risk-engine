@@ -301,7 +301,7 @@ if page == "Overview":
             "Non-linear signal in occupation confirmed",
         ]
     })
-    st.dataframe(progression, use_container_width=True, hide_index=True)
+    st.dataframe(progression, width="stretch", hide_index=True)
 
     st.markdown("---")
 
@@ -400,7 +400,7 @@ elif page == "Prediction":
         st.markdown("### Prediction")
         st.markdown("<br>", unsafe_allow_html=True)
 
-        if st.button("Run Prediction", use_container_width=True):
+        if st.button("Run Prediction", width="stretch"):
             with st.spinner("Calling SageMaker endpoint..."):
                 raw_input = build_raw_input(
                     age, education_code, occupation_code,
@@ -462,7 +462,7 @@ elif page == "Prediction":
                         MAR_LABELS[mar_code],
                     ]
                 })
-                st.dataframe(summary, use_container_width=True,
+                st.dataframe(summary, width="stretch",
                              hide_index=True)
             else:
                 st.error("Prediction failed — model artifact not found locally.")
@@ -518,7 +518,7 @@ elif page == "Fairness Audit":
         "Gate": ["✅ Pass", "✅ Pass", "✅ Pass",
                  "✅ Pass", "✅ Pass", "✅ Pass"],
     })
-    st.dataframe(race_data, use_container_width=True, hide_index=True)
+    st.dataframe(race_data, width="stretch", hide_index=True)
 
     st.markdown("""
     <div style='background: #141824; border-left: 3px solid #f59e0b;
@@ -543,7 +543,7 @@ elif page == "Fairness Audit":
         "AUC-ROC": [0.946, 0.954],
         "Gate": ["✅ Pass", "✅ Pass"],
     })
-    st.dataframe(sex_data, use_container_width=True, hide_index=True)
+    st.dataframe(sex_data, width="stretch", hide_index=True)
 
     # Nativity results
     st.markdown("## Nativity")
@@ -555,7 +555,7 @@ elif page == "Fairness Audit":
         "AUC-ROC": [0.951, 0.949],
         "Gate": ["✅ Pass", "✅ Pass"],
     })
-    st.dataframe(nativity_data, use_container_width=True, hide_index=True)
+    st.dataframe(nativity_data, width="stretch", hide_index=True)
 
     st.markdown("---")
     st.markdown("""
@@ -602,7 +602,7 @@ elif page == "Model Metrics":
         # Simple bar chart using streamlit
         st.bar_chart(
             importance.set_index("Feature")["Importance"],
-            use_container_width=True,
+            width="stretch",
             color="#7ee8a2",
         )
         st.markdown("""
@@ -623,7 +623,7 @@ elif page == "Model Metrics":
             "Delta AUC": ["—", "+0.0000", "+0.0398"],
             "Delta F1": ["—", "-0.0001", "+0.1125"],
         })
-        st.dataframe(progression, use_container_width=True, hide_index=True)
+        st.dataframe(progression, width="stretch", hide_index=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -635,7 +635,7 @@ elif page == "Model Metrics":
                           "colsample_bytree"],
             "Value": [403, 5, 0.0432, 2.43, 0.438, 0.691, 0.792],
         })
-        st.dataframe(params, use_container_width=True, hide_index=True)
+        st.dataframe(params, width="stretch", hide_index=True)
         st.markdown("""
         <div style='font-size: 0.8rem; color: #4a5568;'>
         Tuned via Optuna — 30 trials, 5-fold stratified CV.

@@ -205,7 +205,7 @@ responsible-mlops-risk-engine/
 - ✅ Evidently AI drift monitoring — CloudWatch metrics
 - ✅ NIST AI RMF 1.0 alignment document
 - ✅ Decision log — DL-001 through DL-012
-- ⬜ Streamlit demo
+- ✅ Streamlit demo
 
 ---
 
