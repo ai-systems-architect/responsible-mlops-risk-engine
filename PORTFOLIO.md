@@ -121,7 +121,7 @@ income distribution patterns in the underlying Virginia labor market data.
 
 Full findings and risk response commitments are documented in
 `docs/fairness_report.md`. Model card with full limitations and
-monitoring plan: `docs/MODEL_CARD.md`
+monitoring plan: `docs/model_card.md`
 
 ---
 

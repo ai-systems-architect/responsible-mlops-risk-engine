@@ -406,7 +406,9 @@ responsible-mlops-risk-engine/
     ├── decision_log.md               # DL-001 through DL-016
     ├── fairness_report.md            # Stakeholder fairness audit
     ├── nist_alignment.md             # NIST AI RMF 1.0 mapping
-    └── architecture.md               # This document
+    ├── architecture.md               # This document
+    ├── model_card.md                 # Model details, intended use, limitations
+    └── runbook.md                    # Operational procedures
 ```
 
 ---
