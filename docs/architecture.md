@@ -224,6 +224,9 @@ verification and destroyed immediately after screenshot. Production
 deployment would use auto-scaling to bring instance count to zero during
 off-peak hours.
 
+Preprocessing is applied client-side before invocation. See DL-014 for
+the full architectural rationale and alternatives considered.
+
 ---
 
 ## Monitoring
@@ -241,6 +244,13 @@ on every run. Alert threshold: drift_share > 0.20 triggers retraining
 recommendation.
 
 **Virginia baseline:** 0/6 features drifted. Drift share: 0.0.
+
+**Drift Response Workflow:**
+When drift_share exceeds 0.20, a CloudWatch alarm fires and notifies
+the responsible engineer. The engineer reviews the drift report to
+confirm the drift is meaningful before initiating retraining. Automated
+retraining without human review is explicitly not implemented — see
+DL-015 for full rationale.
 
 ---
 
@@ -309,6 +319,60 @@ proven end-to-end on Virginia data.
 
 ---
 
+## Tradeoffs and Future Work
+
+### sklearn Pipeline — Preprocessing Bundling Deferred
+The current serving architecture applies preprocessing client-side and
+passes preprocessed inputs to the SageMaker endpoint. Bundling preprocessing
+and model into a single sklearn Pipeline artifact is the correct long-term
+design — it eliminates version mismatch risk and simplifies inference.
+
+This was deferred deliberately. The SageMaker XGBoost managed container
+loads native JSON format directly with no custom inference script. A
+sklearn Pipeline artifact requires either an sklearn container with a
+custom inference script or a custom container with a Dockerfile and ECR
+push. Both paths were attempted and failed due to container behavior
+documented in DL-011. The working deployment takes priority over
+architectural purity at this stage.
+
+**Future work:** Implement full sklearn Pipeline and serve via SageMaker
+sklearn container once the container scripting issues are resolved.
+
+### National Scale
+The pipeline is proven end-to-end on Virginia data (88,928 records).
+National expansion (STATE_CODE="*", ~1.5M records) requires:
+- Optuna trial budget review — 30 trials sufficient for Virginia,
+  may need adjustment for national feature distributions
+- SageMaker endpoint auto-scaling policy — current deployment is
+  single instance, appropriate for development verification
+- Evidently AI drift analysis memory and runtime review at 1.5M records
+- CloudWatch alarm thresholds retuned for national traffic volume
+- Full national fairness audit — Virginia results are not nationally
+  representative, particularly for small demographic groups
+
+**Future work:** National retrain is one config change. The infrastructure
+and monitoring design are already built to support it.
+
+### Retraining Automation
+The current retraining trigger is manual — a CloudWatch alarm notifies
+an engineer who initiates retraining after human review. EventBridge and
+Lambda infrastructure for automated triggering is referenced in the
+architecture but retrain_trigger.py is not implemented.
+
+**Future work:** Implement retrain_trigger.py — EventBridge rule fires
+on CloudWatch alarm, Lambda initiates the retraining pipeline, human
+approval gate remains before production promotion.
+
+### Auto-scaling
+The SageMaker endpoint is deployed on a single ml.m5.xlarge instance.
+For production traffic, an Application Auto Scaling policy would scale
+instance count based on invocation rate and bring instances to zero
+during off-peak hours to minimize cost.
+
+**Future work:** Add auto-scaling policy to infrastructure/main.tf.
+
+---
+
 ## Repository Structure
 
 ```
@@ -339,7 +403,7 @@ responsible-mlops-risk-engine/
 │   └── outputs.tf
 │
 └── docs/
-    ├── decision_log.md               # DL-001 through DL-012
+    ├── decision_log.md               # DL-001 through DL-016
     ├── fairness_report.md            # Stakeholder fairness audit
     ├── nist_alignment.md             # NIST AI RMF 1.0 mapping
     └── architecture.md               # This document
