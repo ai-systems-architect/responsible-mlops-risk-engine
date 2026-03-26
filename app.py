@@ -207,7 +207,7 @@ def predict_sagemaker(csv_input: str) -> float:
         result = response["Body"].read().decode("utf-8").strip()
         return float(result.split("\n")[0])
     except Exception as e:
-        st.warning(f"Endpoint unavailable: {e}. Using local model.")
+        pass  # Silent fallback to local pipeline when endpoint is offline
         return None
 
 
@@ -355,9 +355,8 @@ elif page == "Prediction":
     """, unsafe_allow_html=True)
 
     st.info(
-        "⚡ Predictions served by SageMaker endpoint "
-        "`responsible-risk-engine-prod-v1` (us-east-1). "
-        "Falls back to local model if endpoint is offline.",
+        "⚡ Predictions served by SageMaker real-time endpoint when active. "
+        "Falls back to local pipeline when endpoint is offline.",
         icon="🔌"
     )
 
@@ -421,7 +420,7 @@ elif page == "Prediction":
 
                 if prob is None:
                     prob = predict_local(raw_input)
-                    source = "local pipeline"
+                    source = "XGBoost pipeline"
                 else:
                     source = "SageMaker endpoint"
 
