@@ -58,9 +58,8 @@ or fairness layers.
 │                                      (XGBoost container)            │
 │                                             │                        │
 │                                      HTTPS invocations              │
-│                    https://runtime.sagemaker.us-east-1.amazonaws.com│
-│                    /endpoints/responsible-risk-engine-prod-v1/      │
-│                    invocations                                       │
+│                    https://runtime.sagemaker.{region}.amazonaws.com │
+│                    /endpoints/{endpoint-name}/invocations           │
 └──────────────────────────────────────────────────────────────────── ┘
            │
 ┌──────────▼──────────────────────────────────────────────────────────┐
@@ -186,9 +185,9 @@ through the console. `infrastructure/main.tf` provisions:
 
 | Resource | Purpose |
 |---|---|
-| S3 raw data | `responsible-risk-engine-raw-data-REDACTED` |
-| S3 processed | `responsible-risk-engine-processed-REDACTED` |
-| S3 models | `responsible-risk-engine-models-REDACTED` |
+| S3 raw data | Stores raw ACS PUMS parquet files from Census API pull |
+| S3 processed | Stores engineered features, encoders, scaler artifacts |
+| S3 models | Stores trained model artifacts for SageMaker deployment |
 | IAM role | Least-privilege SageMaker execution role |
 | IAM policy | Scoped to project buckets + default SageMaker bucket |
 | CloudWatch alarms | Endpoint availability, error rate, p99 latency |
@@ -216,8 +215,8 @@ consistently regardless of script naming. Saving the booster directly with
 
 Endpoint URL:
 ```
-https://runtime.sagemaker.us-east-1.amazonaws.com/endpoints/
-responsible-risk-engine-prod-v1/invocations
+https://runtime.sagemaker.{region}.amazonaws.com
+/endpoints/{endpoint-name}/invocations
 ```
 
 The endpoint costs ~$5/day. In this portfolio it is deployed for
@@ -296,8 +295,8 @@ MLflow registry, same drift monitoring. Only the deployment target changes.
 
 ## Production Path
 
-The current pipeline runs on Virginia (FIPS 51) development data.
-Production deployment requires:
+The pipeline is deployed and verified on Virginia (FIPS 51) data.
+National expansion is a documented future enhancement:
 
 1. **National data pull** — set `STATE_CODE = "*"` in `config.py`
 2. **Retrain** — full pipeline from `ingest.py` through `register.py`
@@ -305,8 +304,8 @@ Production deployment requires:
 4. **Deployment approval** — human sign-off on national audit results
 5. **Monitor** — drift_monitor.py against national training distribution
 
-This is one config change followed by the same pipeline that's already
-been proven end-to-end on Virginia data.
+This is one config change followed by the same pipeline already
+proven end-to-end on Virginia data.
 
 ---
 
