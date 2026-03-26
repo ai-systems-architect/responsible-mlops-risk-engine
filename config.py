@@ -140,6 +140,10 @@ RANDOM_STATE = 42
 # Models below this threshold are not promoted to staging
 MIN_AUC_THRESHOLD = 0.82
 
+# Future consideration: MIN_F1_THRESHOLD
+# A minimum F1 gate would catch models that pass AUC but have degraded
+# precision/recall balance — stricter production standard for high-stakes deployment
+
 # Optuna hyperparameter tuning trial counts
 # Lower count for CI/CD runs to keep pipeline execution time reasonable
 # Higher count for local training runs to find better parameters
