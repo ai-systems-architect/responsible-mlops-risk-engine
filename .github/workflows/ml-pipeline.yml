@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest python-dotenv
+          pip install flake8 python-dotenv
 
       - name: Show project structure
         run: ls -la
@@ -34,7 +34,7 @@ jobs:
       - name: Check project structure
         run: |
           ls -la
-          test -f config.py && echo "config.py found" || echo "config.py missing"
-          test -d src/data && echo "src/data found" || echo "src/data missing"
-          test -f docs/decision_log.md && echo "decision_log.md found" || echo "missing"
+          test -f config.py || exit 1
+          test -d src/data || exit 1
+          test -f docs/decision_log.md || exit 1
           echo "Structure check complete"
