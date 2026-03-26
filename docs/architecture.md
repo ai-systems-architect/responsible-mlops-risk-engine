@@ -85,7 +85,7 @@ or fairness layers.
 `src/data/ingest.py` pulls ACS PUMS 2023 microdata from the U.S. Census
 Bureau API. The pull is parameterized by `STATE_CODE` in `config.py`:
 - `"51"` — Virginia, 88,928 records, used for development
-- `"*"` — all 50 states, ~1.5M records, the production path
+- `"*"` — all 50 states, ~1.5M records, documented future enhancement
 
 Raw data is saved as timestamped parquet to `data/raw/`. The Census API
 key is loaded from `.env` — never stored in source code.
