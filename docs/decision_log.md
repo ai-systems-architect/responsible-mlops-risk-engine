@@ -25,7 +25,7 @@ program eligibility determinations.
 **Decision:** Virginia (FIPS 51) used for pipeline development and testing
 **Rationale:** 88,928 records sufficient for model development with 
 significantly faster iteration cycles than national pull (~1.5M records).
-National pull reserved for final model training.
+National pull is a documented future enhancement — see DL-012.
 
 ---
 
@@ -156,3 +156,136 @@ requirements are established for production deployment:
 - Document American Indian group metrics after national pull
 
 ---
+## DL-010 — SageMaker Python SDK Pinned to 2.x
+**Date:** 2026-03-19
+**Decision:** SageMaker SDK constrained to `>=2.200.0,<3.0.0` in requirements.txt
+**Rationale:** SageMaker 3.x (released early 2026) is a complete API rewrite.
+All framework-specific classes — XGBoostModel, SKLearnModel, XGBoostPredictor —
+were removed and replaced with unified ModelBuilder and ModelTrainer classes.
+Version 3.x is too new and poorly documented for production use. Version 2.257.1
+is the stable, well-documented version used across all production pipelines.
+
+---
+
+## DL-011 — Native XGBoost Format for SageMaker Deployment
+**Date:** 2026-03-19
+**Decision:** Model saved in XGBoost native JSON format for SageMaker deployment
+**Rationale:** The joblib-serialized XGBClassifier (sklearn API) repeatedly failed
+in the SageMaker XGBoost container due to container behavior — the container always
+runs `pip install .` on any code directory it finds, then attempts to import the
+installed package. This caused import failures regardless of script naming.
+
+The native XGBoost JSON format eliminates the need for a custom inference script
+entirely. The container loads the model directly with no pip install, no import
+issues, and no script management. The joblib artifact is retained locally for
+MLflow logging and Streamlit inference.
+
+Conversion:
+```python
+model.get_booster().save_model('models/xgboost_native.json')
+```
+
+**Result:** Endpoint reached InService in 4 minutes. All predictions consistent
+with local model — delta < 0.001 across all test records.
+
+---
+
+## DL-012 — National Data Pull Deferred to Production
+**Date:** 2026-03-19
+**Decision:** Pipeline developed and deployed on Virginia (FIPS 51) data only.
+National retrain deferred.
+**Rationale:** Virginia data (88,928 records) provides sufficient volume for
+development iteration and model validation. The full pipeline — ingestion,
+preprocessing, training, fairness audit, MLflow registry, and SageMaker deployment
+— is proven end-to-end on Virginia data.
+
+National retrain requires one configuration change:
+```python
+STATE_CODE = "*"  # config.py — pulls ~1.5M records across all 50 states
+```
+
+This is the documented production path. Federal pilots always start with a state
+before going national — this approach reflects real government delivery practice.
+
+---
+## DL-014 — SageMaker Endpoint Receives Preprocessed Inputs
+**Date:** 2026-03-20
+**Decision:** SageMaker endpoint accepts preprocessed inputs. Full sklearn Pipeline
+used client-side (app.py, batch scoring) rather than inside the container.
+**Rationale:** The SageMaker XGBoost managed container can only serve XGBoost's
+native binary/JSON format. It cannot load or run a full sklearn Pipeline object.
+
+The serving architecture is:
+
+```
+Client (app.py / API caller)
+    ↓  raw inputs (age, education codes, occupation codes)
+    ↓  pipeline.named_steps["preprocessor"].transform()
+    ↓  preprocessed CSV
+SageMaker Endpoint
+    ↓  native XGBoost inference
+    ↓  probability score
+Client
+```
+
+The full sklearn Pipeline (`full_pipeline_*.joblib`) is the primary artifact
+for local inference, batch scoring, and the Streamlit demo fallback. The
+SageMaker endpoint is the production serving layer for real-time API calls.
+
+This is the standard pattern for XGBoost on SageMaker. Alternatives considered:
+
+    1. sklearn container — can serve full pipeline but requires custom inference
+       script, which caused repeated container failures (see DL-011).
+    2. Custom container — full control but requires Dockerfile and ECR push,
+       adding infrastructure complexity not justified at this scope.
+    3. Current approach — clean separation of concerns, proven working deployment.
+
+---
+
+---
+## DL-015 — Drift Response Workflow
+**Date:** 2026-03-26
+**Decision:** Drift response is manual review triggered by CloudWatch alarm,
+not automated retraining.
+**Rationale:** Evidently AI drift_monitor.py publishes 9 metrics to CloudWatch
+namespace ResponsibleRiskEngine/Drift on every run. When drift_share exceeds
+0.20, a CloudWatch alarm fires. The response workflow is:
+
+1. CloudWatch alarm notifies the responsible engineer via SNS
+2. Engineer reviews the drift report (drift_report_*.html) to identify
+   which features drifted and by how much
+3. If drift is confirmed as meaningful — not a data pipeline artifact —
+   a retraining run is initiated manually
+4. Full pipeline runs from ingest.py through register.py
+5. Fairness gate must pass before the new model is eligible for promotion
+6. Human sign-off required before promoting new model to production
+7. Previous model remains live until new model is approved and deployed
+
+**Rationale for manual retraining over automated:** Automated retraining
+without human review risks promoting a model that passes AUC and fairness
+gates on drifted data that no longer reflects the intended population.
+In a government-aligned pipeline, human review before promotion is a
+requirement, not a preference.
+
+---
+## DL-016 — Fairness Gate Failure Recovery
+**Date:** 2026-03-26
+**Decision:** Fairness gate failure blocks deployment and requires documented
+human investigation before retraining is attempted.
+**Rationale:** evaluate.py exits with code 1 when any demographic group
+exceeds ±0.20 PPR threshold, blocking all downstream steps. Recovery process:
+
+1. Engineer reviews per-group PPR and AUC results in the run output
+2. Root cause investigation — determine whether failure is caused by:
+   - Data shift in a demographic group
+   - Label imbalance introduced by preprocessing
+   - Model behavior change from hyperparameter tuning
+3. Findings documented in docs/fairness_report.md before any retraining
+4. Retraining initiated only after root cause is identified and documented
+5. Human sign-off required on fairness results before production promotion
+6. Gate threshold cannot be overridden in CI/CD — any override requires
+   a decision log entry with explicit justification
+
+**No silent override path exists by design.** A failing fairness gate
+that proceeds to deployment without documented human review is an audit
+failure in a government-delivery context.
