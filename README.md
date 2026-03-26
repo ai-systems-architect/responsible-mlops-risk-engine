@@ -13,7 +13,7 @@ U.S. Census Bureau data. The pipeline covers the full lifecycle: data
 ingestion through model deployment, with demographic fairness enforcement
 and drift monitoring built in as first-class requirements.
 
-Built to the standards I apply in federal and government delivery
+Built to the standards applied in federal and government delivery
 environments: auditability at every stage, reproducible infrastructure,
 and alignment with NIST AI RMF 1.0 from day one.
 
@@ -21,12 +21,11 @@ and alignment with NIST AI RMF 1.0 from day one.
 
 ## Why This Dataset
 
-Most income classification projects use the 1994 UCI Adult Census dataset.
-That data is over 30 years old. The 2023 ACS PUMS is official Census Bureau
+The 2023 ACS PUMS was a deliberate choice. It is official Census Bureau
 microdata released annually — current, government-sourced, and representative
-of today's labor market. The income threshold here is $75,000, which
-approximates the 2023 U.S. median household income, not the 1994 $50K figure
-still used in most portfolio reproductions.
+of today's labor market. The income threshold is set at $75,000, approximating
+the 2023 U.S. median household income, grounding the classification task in
+present economic reality.
 
 ---
 
@@ -148,7 +147,7 @@ costs ~$5/day — deployed on demand and destroyed immediately after use.
 
 | Decision | Rationale |
 |---|---|
-| ACS PUMS 2023 over UCI Adult | Current government data — income threshold and demographics reflect 2023, not 1994 |
+| ACS PUMS 2023 | Official Census Bureau microdata — current, annually updated, income threshold and demographics grounded in 2023 |
 | person_weight as sample_weight | Census sampling artifact — passed to XGBoost for population representativeness, not a model input |
 | Fairness gate in CI/CD | Demographic audit is a deployment requirement, not a report |
 | Native XGBoost JSON format for SageMaker | Eliminates container script-loading issues — booster loaded directly, no custom inference script needed |
