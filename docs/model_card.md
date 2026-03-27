@@ -31,14 +31,15 @@ Public Use Microdata Sample — official U.S. Census Bureau microdata.
 ## Intended Use
 
 **Primary use case:**
-Income-based risk scoring for program eligibility screening, resource
-allocation analysis, and policy research on labor market income
-distributions.
+Income-based risk scoring demonstration for program eligibility
+screening and labor market income distribution analysis. Built to
+production MLOps standards — fairness enforcement, drift monitoring,
+and NIST AI RMF alignment — on Virginia 2023 ACS data.
 
 **Intended users:**
-Policy analysts, program administrators, and data science teams in
-government and public sector organizations requiring auditable,
-fairness-enforced income classification.
+Data science and ML engineering teams evaluating responsible AI
+pipeline design. Government and public sector teams assessing
+MLOps practices for income classification use cases.
 
 **Intended context:**
 Decision-support tool — model outputs are one input to a human review
@@ -88,7 +89,7 @@ The following uses are explicitly out of scope:
 
 **Features explicitly excluded from model inputs:**
 Race, sex, nativity — physically separated at preprocessing, used
-exclusively for post-prediction fairness audit. See DL-004, DL-014.
+exclusively for post-prediction fairness audit. See DL-014.
 
 **Train/test split:** 80/20 stratified, RANDOM_STATE=42
 
@@ -177,9 +178,10 @@ scale_pos_weight=2.43 corrects for this during training. Precision
 
 ## Monitoring Plan
 
-- **Drift monitoring:** Evidently AI — daily comparison of production
-  inputs against training distribution reference. 9 metrics published
-  to CloudWatch namespace `ResponsibleRiskEngine/Drift`.
+- **Drift monitoring:** Evidently AI — designed for daily comparison
+  of production inputs against training distribution reference. 9 metrics
+  published to CloudWatch namespace `ResponsibleRiskEngine/Drift`.
+  Active when endpoint is deployed.
 - **Drift threshold:** drift_share > 0.20 triggers CloudWatch alarm
   and manual retraining review — see DL-015.
 - **Fairness monitoring:** Per-group PPR monitored monthly. Any group
