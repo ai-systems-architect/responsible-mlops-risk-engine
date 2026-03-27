@@ -321,6 +321,27 @@ proven end-to-end on Virginia data.
 
 ## Tradeoffs and Future Work
 
+### Pipeline Execution — Local Scripts
+Ingestion and preprocessing currently run as local scripts. Raw and
+processed data artifacts are stored locally and not written to S3 in
+the current implementation. The three S3 buckets provisioned via
+Terraform reflect the target production architecture:
+
+- S3 raw — target destination for ingest.py output in production
+- S3 processed — target destination for preprocess.py output in production
+- S3 models — model artifact for SageMaker endpoint deployment (active)
+
+Ingest and preprocessing are intentionally kept as standalone scripts —
+consistent with the platform-agnostic design above the serving layer.
+In production these scripts run as scheduled jobs on whatever orchestration
+platform is available: a cron job on EC2, an Airflow DAG, a Kubernetes
+CronJob, or a cloud-native scheduler. No script changes required —
+only the execution environment and S3 write destination change.
+
+**Future work:** Connect ingest.py and preprocess.py output to S3 raw
+and processed buckets. Add orchestration trigger for scheduled and
+drift-reactive retraining runs.
+
 ### sklearn Pipeline — Preprocessing Bundling Deferred
 The current serving architecture applies preprocessing client-side and
 passes preprocessed inputs to the SageMaker endpoint. Bundling preprocessing
