@@ -3,11 +3,10 @@
 
 **Date:** 2026-03-19
 **Framework:** NIST AI Risk Management Framework 1.0
-**Reference:** https://airc.nist.gov/RMF
+**Reference:** [NIST AI RMF](https://airc.nist.gov/RMF)
 
 This document maps each component of the pipeline to specific NIST AI RMF
-controls. It is intended for technical reviewers, contracting officers, and
-AI governance stakeholders evaluating responsible AI practices.
+controls.
 
 ---
 
@@ -89,8 +88,9 @@ approximates the 2023 U.S. median household income and is documented in
 `config.py` and `docs/decision_log.md` DL-002.
 
 Affected populations: U.S. working-age adults (18+) across all demographic
-groups represented in ACS PUMS data. Virginia (FIPS 51) used for development;
-national data pull (`STATE_CODE="*"`) is the documented production path.
+groups represented in ACS PUMS data. Virginia (FIPS 51) used for development
+and production. National expansion (`STATE_CODE="*"`) is a documented future
+enhancement.
 
 Deployment context: The model produces probability scores — not binary
 decisions. Human review is required before any consequential action is taken
@@ -329,6 +329,7 @@ National data pull activated by setting `STATE_CODE = "*"` in `config.py`.
 
 ---
 
-*This document reflects the Virginia (FIPS 51) development pipeline.
-National expansion to STATE_CODE="*" is the documented production path.
-A full NIST alignment review is recommended before national deployment.*
+*This document reflects the Virginia (FIPS 51) development and production
+pipeline. National expansion to STATE_CODE="*" is a documented future
+enhancement. A full NIST alignment review is recommended before national
+deployment.*
