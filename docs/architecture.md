@@ -342,22 +342,26 @@ only the execution environment and S3 write destination change.
 and processed buckets. Add orchestration trigger for scheduled and
 drift-reactive retraining runs.
 
-### sklearn Pipeline — Preprocessing Bundling Deferred
-The current serving architecture applies preprocessing client-side and
-passes preprocessed inputs to the SageMaker endpoint. Bundling preprocessing
-and model into a single sklearn Pipeline artifact is the correct long-term
-design — it eliminates version mismatch risk and simplifies inference.
+### Preprocessing and Serving — Intentional Separation
+Preprocessing runs client-side and the SageMaker endpoint receives
+preprocessed inputs. This is a deliberate architectural decision, not
+a gap. Keeping preprocessing and serving as separate layers means:
 
-This was deferred deliberately. The SageMaker XGBoost managed container
-loads native JSON format directly with no custom inference script. A
-sklearn Pipeline artifact requires either an sklearn container with a
-custom inference script or a custom container with a Dockerfile and ECR
-push. Both paths were attempted and failed due to container behavior
-documented in DL-011. The working deployment takes priority over
-architectural purity at this stage.
+- Preprocessing can be updated independently of the model
+- The serving layer has no dependency on sklearn transformers
+- The pattern is consistent with feature store architectures used
+  in production — where features are prepared upstream and the
+  model endpoint handles inference only
 
-**Future work:** Implement full sklearn Pipeline and serve via SageMaker
-sklearn container once the container scripting issues are resolved.
+The known tradeoff is the inference contract — feature order, encoding,
+and scaling must match the training artifacts exactly. This is documented
+in DL-014 and the model card limitations section. The contract is managed
+through versioned preprocessing artifacts saved alongside the model in
+MLflow.
+
+**Future work:** Formalize the inference contract with schema validation
+at the preprocessing step — enforce feature order and type before
+inputs reach the endpoint.
 
 ### National Scale
 The pipeline is proven end-to-end on Virginia data (88,928 records).
