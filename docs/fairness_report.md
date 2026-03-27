@@ -182,6 +182,8 @@ The following actions are required before and during production deployment:
 - PPR delta measured against overall test set PPR (0.2686)
 - AUC computed per group where both positive and negative classes present
 - All results based on Virginia 2023 ACS data — not nationally representative
+- "Some other race alone" excluded from inter-group gap reporting —
+  Census catch-all category, not a defined demographic population
 
 ---
 
