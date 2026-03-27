@@ -186,21 +186,6 @@ data "aws_iam_policy_document" "sagemaker_s3_access" {
       "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/sagemaker/*",
     ]
   }
-
-  # ECR — required for SageMaker to pull framework containers
-  statement {
-    sid    = "ECRReadAccess"
-    effect = "Allow"
-
-    actions = [
-      "ecr:GetAuthorizationToken",
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:GetDownloadUrlForLayer",
-      "ecr:BatchGetImage",
-    ]
-
-    resources = ["*"]
-  }
 }
 
 resource "aws_iam_policy" "sagemaker_s3_access" {
