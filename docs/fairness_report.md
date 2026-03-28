@@ -157,7 +157,7 @@ The following actions are required before and during production deployment:
 | Monitor per-group PPR drift monthly | Post-deployment | ML team — via drift_monitor.py |
 | Alert threshold set at ±0.15 PPR delta | Tighter than gate — early warning | ML team — via CloudWatch |
 | Human review required if any group exceeds ±0.15 | Monthly drift report | Responsible AI reviewer |
-| Retrain if drift exceeds ±0.20 on any group | Drift alarm | ML team — via drift_monitor.py |
+| Retrain if drift exceeds ±0.20 on any group | Drift alarm | ML team — manual trigger, see DL-015 |
 
 ---
 
