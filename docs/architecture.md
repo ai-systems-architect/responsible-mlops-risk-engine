@@ -396,6 +396,17 @@ during off-peak hours to minimize cost.
 
 **Future work:** Add auto-scaling policy to infrastructure/main.tf.
 
+### Client Layer — Streamlit
+Streamlit is used for portfolio demonstration. It is single-threaded
+and not designed for production traffic. In a production deployment
+the client layer would be a FastAPI service containerized and deployed
+on Kubernetes or ECS, behind an API Gateway with authentication and
+audit logging. The SageMaker endpoint and all pipeline components
+remain unchanged — only the client layer changes.
+
+**Future work:** Replace Streamlit demo with a FastAPI service for
+production client-facing deployment.
+
 ---
 
 ## Repository Structure
