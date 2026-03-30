@@ -407,6 +407,25 @@ remain unchanged — only the client layer changes.
 **Future work:** Replace Streamlit demo with a FastAPI service for
 production client-facing deployment.
 
+### Model Drift — Not Monitored
+Evidently AI monitors data drift — changes in input feature distributions
+against the training baseline. Model drift — degradation in prediction
+accuracy — is not monitored in the current pipeline.
+
+Monitoring model drift requires ground truth labels post-deployment:
+knowing whether each individual actually earned above $75,000 after
+the model made its prediction. That data does not flow back automatically
+in the current architecture.
+
+CloudWatch alarms cover infrastructure health — endpoint availability,
+error rate, and latency. These are proxies for model health but do not
+measure prediction accuracy directly.
+
+**Future work:** Implement delayed label collection — capture ground
+truth outcomes after a defined period, recompute AUC and fairness
+metrics against live predictions, and trigger retraining if model
+performance degrades below MIN_AUC_THRESHOLD.
+
 ---
 
 ## Repository Structure
