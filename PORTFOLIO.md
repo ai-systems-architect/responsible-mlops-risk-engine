@@ -13,7 +13,7 @@ A production-grade MLOps pipeline for income-based risk scoring built on
 data ingestion through model deployment, with demographic fairness audits
 and drift monitoring built in as first-class requirements.
 
-Built to the standards I apply in federal and government delivery
+Built to the standards applied in federal and government delivery
 environments: auditability at every stage, reproducible infrastructure,
 and alignment with NIST AI RMF 1.0 from day one.
 
@@ -21,18 +21,12 @@ and alignment with NIST AI RMF 1.0 from day one.
 
 ## Why This Dataset
 
-Most income classification projects use the 1994 UCI Adult Census dataset.
-That data is 30 years old — income thresholds, occupation distributions,
-and demographic compositions are no longer representative of the current
-labor market.
-
-The 2023 American Community Survey Public Use Microdata Sample is official
-U.S. Census Bureau microdata representing approximately 3.5 million
-individuals. It is released annually, used by federal agencies and policy
-organizations, and reflects current labor market conditions. The income
-threshold in this project — $75,000 — approximates the 2023 U.S. median
-household income rather than the 1994 $50K figure still used in most
-portfolio reproductions.
+The 2023 American Community Survey Public Use Microdata Sample was a
+deliberate choice. It is official U.S. Census Bureau microdata released
+annually — current, government-sourced, and representative of today's
+labor market. The income threshold — $75,000 — approximates the 2023
+U.S. median household income, grounding the classification task in
+present economic reality.
 
 ---
 
@@ -168,7 +162,7 @@ sufficient for deployment.
 |---|---|
 | GOVERN | Decision log, fairness report, stakeholder impact documentation |
 | MAP | Risk identification across demographic groups, use case scoping |
-| MEASURE | SHAP explainability, per-group fairness metrics, Evidently AI drift |
+| MEASURE | XGBoost feature importance, SHAP planned, per-group fairness metrics, Evidently AI drift |
 | MANAGE | Automated retraining triggers, MLflow model registry, deployment approval gate |
 
 Full alignment document: `docs/nist_alignment.md`
@@ -193,7 +187,7 @@ Resources provisioned:
 ## Tech Stack
 
 Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP | AWS SageMaker | S3 | Lambda | EventBridge | Terraform | GitHub Actions |
+SHAP (planned) | AWS SageMaker | S3 | Lambda | EventBridge | Terraform | GitHub Actions |
 Streamlit | pandas | joblib
 
 ---
@@ -203,8 +197,9 @@ Streamlit | pandas | joblib
 American Community Survey (ACS) Public Use Microdata Sample — 2023
 U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
 
-88,928 Virginia records used for development.
-National expansion requires one config change: STATE_CODE="*" in config.py pulls ~1.5M records across all 50 states. Virginia is the development baseline; national retrain is the documented production path.
+88,928 Virginia records used for development and production. National
+expansion is a documented future enhancement — one config change:
+STATE_CODE="*" in config.py pulls ~1.5M records across all 50 states.
 
 ---
 

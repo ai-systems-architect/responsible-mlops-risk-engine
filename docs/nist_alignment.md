@@ -218,10 +218,9 @@ logistic regression coefficients but ranked 2nd and 4th in XGBoost feature
 importance — is documented in `docs/decision_log.md` DL-008 and justified
 the move from the interpretable baseline to XGBoost.
 
-SHAP (SHapley Additive exPlanations) is available in the pipeline
-dependencies for individual prediction explanations. Per-record SHAP values
-are planned for the Streamlit demo — showing which features drove each
-specific prediction.
+SHAP (SHapley Additive exPlanations) is a planned addition for
+per-record explanations in the Streamlit demo — showing which features
+drove each specific prediction. Not yet implemented.
 
 ---
 
