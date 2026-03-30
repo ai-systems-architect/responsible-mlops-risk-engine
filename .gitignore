@@ -51,3 +51,6 @@ models/xgboost_native.json
 *.log
 logs/
 mlartifacts/
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+reports/
