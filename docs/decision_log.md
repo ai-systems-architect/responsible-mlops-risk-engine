@@ -289,3 +289,36 @@ exceeds ±0.20 PPR threshold, blocking all downstream steps. Recovery process:
 **No silent override path exists by design.** A failing fairness gate
 that proceeds to deployment without documented human review is an audit
 failure in a government-delivery context.
+
+---
+## DL-017 — Separate S3 Buckets Over Single Bucket with Prefixes
+**Date:** 2026-03-31
+**Decision:** Three separate S3 buckets provisioned — raw data, processed
+data, and model artifacts — rather than a single bucket with prefixes.
+**Rationale:** Separate buckets provide cleaner boundaries across three
+areas:
+
+1. **IAM policy precision** — least-privilege policies scoped to individual
+   buckets. SageMaker execution role gets read access to models bucket only.
+   A single bucket with prefix-based conditions is more complex and higher
+   risk of misconfiguration.
+
+2. **Independent lifecycle policies** — raw data, processed features, and
+   model artifacts have different retention requirements. Separate buckets
+   allow independent lifecycle rules without cross-stage interference.
+
+3. **Scoped versioning** — versioning enabled on model artifacts bucket only.
+   Model rollback is a requirement; raw and processed data do not need
+   version history. A single bucket would require versioning everything
+   or nothing.
+
+**Alternatives considered:**
+Single bucket with prefixes (e.g. s3://bucket/raw/, s3://bucket/processed/,
+s3://bucket/models/) — simpler to manage at small scale but trades off
+IAM boundary precision and lifecycle policy independence. Appropriate for
+low-complexity projects without strict access control requirements.
+
+**Current state:** S3 models bucket is actively used by deploy.py. Raw
+and processed buckets are provisioned for the production automation path
+where ingest.py and preprocess.py run as scheduled jobs writing to S3.
+See architecture.md Tradeoffs section.
