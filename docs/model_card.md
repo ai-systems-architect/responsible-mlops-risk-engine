@@ -195,7 +195,7 @@ scale_pos_weight=2.43 corrects for this during training. Precision
 ## Governance
 
 - NIST AI RMF 1.0 aligned — full mapping in `docs/nist_alignment.md`
-- Decision log: DL-001 through DL-016 — `docs/decision_log.md`
+- Decision log: DL-001 through DL-017 — `docs/decision_log.md`
 - Fairness report: `docs/fairness_report.md`
 - All model versions tracked in MLflow registry
 - Production promotion requires explicit human sign-off
