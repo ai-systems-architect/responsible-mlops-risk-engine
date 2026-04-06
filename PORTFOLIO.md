@@ -56,7 +56,7 @@ Sensitive credentials stay in `.env` — never in source code.
 
 **Monitoring layer**
 - `src/monitoring/drift_monitor.py` — Evidently AI daily drift detection
-- EventBridge → Lambda retraining — documented future enhancement
+- EventBridge → Lambda retraining — documented future enhancement (planned)
 
 ---
 
@@ -169,6 +169,26 @@ Full alignment document: `docs/nist_alignment.md`
 
 ---
 
+## ATO Documentation Package
+
+A six-document Authorization to Operate package generated against
+the P1 architecture as a portfolio artifact. Demonstrates familiarity
+with the federal authorization process beyond technical implementation.
+
+| Document | Purpose |
+|----------|---------|
+| System Security Plan (SSP) | NIST 800-53 control mapping to P1 architecture |
+| Privacy Impact Assessment (PIA) | Data handling and PII risk analysis |
+| Risk Assessment Report (RAR) | Threat identification and residual risk |
+| Plan of Action & Milestones (POA&M) | Open findings and remediation schedule |
+| AI Impact Assessment | NIST AI RMF alignment and AI-specific risk |
+| Security Assessment Plan (SAP) | Testing methodology and assessment scope |
+
+Baseline: FIPS 199 Moderate. Generated as a representative artifact
+using a sample agency designation — not tied to a live authorization.
+
+---
+
 ## Infrastructure
 
 All AWS resources provisioned via Terraform — nothing created manually
@@ -178,7 +198,7 @@ review process as application code.
 Resources provisioned:
 - S3 buckets — raw data, processed data, model artifacts
 - SageMaker real-time endpoint — ml.m5.xlarge
-- EventBridge + Lambda — drift-triggered retraining
+- EventBridge + Lambda — drift-triggered retraining (planned)
 - CloudWatch — model performance and fairness drift alarms
 - IAM roles — least privilege, no wildcard permissions
 
