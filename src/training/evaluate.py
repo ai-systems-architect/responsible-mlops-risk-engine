@@ -24,18 +24,20 @@ NIST AI RMF alignment:
     MANAGE 2.2  — findings documented for risk response decisions
 """
 
-import logging
-import os
-
-import joblib
-import matplotlib  # noqa: E402
-matplotlib.use("Agg")  # noqa: E402 — must precede pyplot import; safe for CI/CD and script runs
+# matplotlib backend must be set before pyplot is imported
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend — safe for CI/CD and script runs
 import matplotlib.pyplot as plt  # noqa: E402
+
+import logging  # noqa: E402
+import os  # noqa: E402
+from glob import glob  # noqa: E402
+
+import joblib  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 import shap  # noqa: E402
-import numpy as np
-import pandas as pd
-from glob import glob
-from sklearn.metrics import (
+from sklearn.metrics import (  # noqa: E402
     roc_auc_score,
     f1_score,
     precision_score,
@@ -43,7 +45,7 @@ from sklearn.metrics import (
     classification_report,
 )
 
-from config import (
+from config import (  # noqa: E402
     FAIRNESS_THRESHOLD,
     PROCESSED_DATA_DIR,
 )
