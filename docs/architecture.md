@@ -141,6 +141,24 @@ rather than the survey sample.
 
 ---
 
+## Data Layer — Industry Practices
+
+The following practices are standard in production ML pipelines ingesting
+from unstable or multi-source data. Each was evaluated against this
+pipeline's specific data source — the U.S. Census Bureau ACS PUMS API,
+a government microdata release with a published schema and stable annual
+cadence.
+
+| Practice | Tool | Applied | Rationale |
+|---|---|---|---|
+| Schema validation | Great Expectations / Pandera | Not implemented | Census API schema is published and stable. Field changes are announced in annual documentation — caught by the runbook Section 10.2 response. Warrants implementation when ingesting from internal databases or third-party APIs with unstable contracts. |
+| Data versioning | DVC | Not implemented | Raw parquet files are timestamped and gitignored. S3 versioning is enabled on the models bucket — the artifact that requires rollback. Raw data versioning adds overhead without recovery value for an annually-released government dataset. |
+| Lineage tracking | MLflow / OpenLineage | Partially implemented | MLflow captures model lineage — hyperparameters, training data provenance, preprocessing artifacts, and fairness metrics. Dataset lineage (Census API → raw parquet → processed features) is documented in architecture.md but not formally tracked in a lineage system. Full OpenLineage integration is warranted when multiple pipelines share datasets. |
+| Data quality assertions | Great Expectations | Not implemented | Evidently AI monitors distribution shifts post-deployment. The fairness gate catches demographic anomalies post-training. Upstream quality assertions add a layer of defense for pipelines where data quality is uncertain — not warranted for a government microdata source with a known, stable schema. |
+| Feature store | Feast / Tecton | Not implemented | Single model, single feature set, batch ingestion cadence. Feature store overhead is justified when multiple models share features or real-time feature serving is required. Neither applies here. |
+
+---
+
 ## Training
 
 Three models were trained in sequence. Complexity is earned — each stage
