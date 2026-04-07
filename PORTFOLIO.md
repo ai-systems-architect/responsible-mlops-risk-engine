@@ -263,8 +263,8 @@ deployment — one config change separates the two.
 ## Tech Stack
 
 Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP | AWS SageMaker | S3 | Lambda | EventBridge | Terraform | GitHub Actions |
-Streamlit | pandas | joblib
+SHAP | matplotlib | pandas | joblib | boto3 | AWS SageMaker | S3 |
+CloudWatch | IAM | Terraform | GitHub Actions + Environments | Streamlit
 
 ---
 
