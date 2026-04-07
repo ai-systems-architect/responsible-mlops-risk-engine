@@ -193,6 +193,49 @@ Full findings in `docs/fairness_report.md`.
 
 ---
 
+## Governance Flow
+
+The complete path from model training to production — every gate, every
+human touchpoint, and every failure path.
+
+```mermaid
+flowchart TD
+    A([Train XGBoost + Optuna]) --> B[evaluate.py\nAUC gate ≥ 0.82]
+    B -- FAIL --> C([Block — AUC below threshold\nRetrain required])
+    B -- PASS --> D[evaluate.py\nFairness gate ±0.20 PPR]
+    D -- FAIL --> E([Block — CI/CD exits code 1\nInvestigate root cause\nDocument in fairness_report.md])
+    E --> A
+    D -- PASS --> F[register.py\nMLflow Registry — alias: staging]
+    F --> G[GitHub Actions\ndeployment-gate job]
+    G --> H{GitHub Environment\nproduction\nRequired Reviewer: Lead Architect}
+    H -- Rejected --> I([Pipeline blocked\nFindings documented\nPrevious model remains live])
+    H -- Approved --> J[deploy.py\nManual execution\nLead Architect]
+    J --> K([SageMaker Endpoint\nInService])
+    K --> L[drift_monitor.py\nEvidently AI — daily]
+    L -- drift_share > 0.20 --> M([CloudWatch Alarm\nEngineer review\nRetraining initiated])
+    M --> A
+    L -- No drift --> L
+
+    style C fill:#c0392b,color:#fff
+    style E fill:#c0392b,color:#fff
+    style I fill:#c0392b,color:#fff
+    style H fill:#e67e22,color:#fff
+    style K fill:#27ae60,color:#fff
+    style J fill:#2980b9,color:#fff
+```
+
+**Why human approval is structural, not procedural**
+
+Automated gates — AUC threshold, fairness gate, CI/CD — are necessary
+but not sufficient. The GitHub Environment gate converts the human
+approval requirement from a documented process into a systemic
+constraint: the deployment job cannot execute until a named reviewer
+clicks approve in the GitHub Actions UI. This is not a reminder to get
+sign-off — it is a hard stop that makes sign-off mechanically required.
+See DL-015 for full rationale.
+
+---
+
 ## Key Tradeoffs
 
 The three decisions with the most significant architectural and ethical
