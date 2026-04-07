@@ -186,7 +186,7 @@ sufficient for deployment.
 |---|---|
 | GOVERN | Decision log, fairness report, stakeholder impact documentation |
 | MAP | Risk identification across demographic groups, use case scoping |
-| MEASURE | XGBoost feature importance, SHAP planned, per-group fairness metrics, Evidently AI drift |
+| MEASURE | XGBoost feature importance, SHAP global beeswarm + per-record waterfall, per-group fairness metrics, Evidently AI drift |
 | MANAGE | Automated retraining triggers, MLflow model registry, deployment approval gate |
 
 Full alignment document: `docs/nist_alignment.md`
@@ -263,7 +263,7 @@ deployment — one config change separates the two.
 ## Tech Stack
 
 Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP (planned) | AWS SageMaker | S3 | Lambda | EventBridge | Terraform | GitHub Actions |
+SHAP | AWS SageMaker | S3 | Lambda | EventBridge | Terraform | GitHub Actions |
 Streamlit | pandas | joblib
 
 ---

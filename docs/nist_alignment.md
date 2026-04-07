@@ -36,7 +36,7 @@ policy commitment into an automated enforcement mechanism that cannot be
 bypassed without explicit code changes.
 
 The decision log (`docs/decision_log.md`) records every design choice with
-rationale — DL-001 through DL-012 — providing an auditable trail of
+rationale — DL-001 through DL-018 — providing an auditable trail of
 deliberate decisions rather than undocumented assumptions.
 
 ---

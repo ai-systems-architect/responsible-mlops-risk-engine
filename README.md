@@ -90,7 +90,7 @@ risk response commitments in `docs/fairness_report.md`.
 
 | Function | Implementation |
 |---|---|
-| GOVERN | Decision log DL-001 to DL-016, sensitive feature separation, MLflow lineage |
+| GOVERN | Decision log DL-001 to DL-018, sensitive feature separation, MLflow lineage |
 | MAP | Risk identification table, use case scoping, impact assessment per demographic group |
 | MEASURE | Per-group PPR and AUC, fairness gate in CI/CD, Evidently AI drift monitoring |
 | MANAGE | Multi-stage deployment approval, retraining triggers, CloudWatch alarms |
@@ -187,7 +187,7 @@ responsible-mlops-risk-engine/
 │   ├── variables.tf
 │   └── outputs.tf
 └── docs/
-    ├── decision_log.md          # DL-001 through DL-016
+    ├── decision_log.md          # DL-001 through DL-018
     ├── fairness_report.md       # Stakeholder fairness audit
     ├── nist_alignment.md        # NIST AI RMF 1.0 mapping
     ├── architecture.md          # System design
@@ -207,7 +207,7 @@ responsible-mlops-risk-engine/
 - ✅ SageMaker real-time endpoint — deployed and verified
 - ✅ Evidently AI drift monitoring — CloudWatch metrics
 - ✅ NIST AI RMF 1.0 alignment document
-- ✅ Decision log — DL-001 through DL-016
+- ✅ Decision log — DL-001 through DL-018
 - ✅ Model card — intended use, limitations, fairness summary
 - ✅ Runbook — deployment, rollback, drift response, retraining
 - ✅ Streamlit demo
@@ -260,7 +260,7 @@ one config change: `STATE_CODE = "*"` in `config.py`.
 ## Tech Stack
 
 Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP (planned) | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
+SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
 
 ---
 

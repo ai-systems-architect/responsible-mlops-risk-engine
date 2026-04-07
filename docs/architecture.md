@@ -262,7 +262,7 @@ alternatives considered.
 
 | Tradeoff | Decision | What Was Traded |
 |---|---|---|
-| XGBoost vs. Logistic Regression | XGBoost selected — +4.4% AUC, +17.3% F1 | Per-feature interpretability reduced relative to logistic regression. Mitigated by XGBoost feature importance scores and planned SHAP per-record explanations. |
+| XGBoost vs. Logistic Regression | XGBoost selected — +4.4% AUC, +17.3% F1 | Per-feature interpretability reduced relative to logistic regression. Mitigated by XGBoost feature importance scores and SHAP — global beeswarm in evaluate.py, per-record waterfall in Streamlit demo. |
 | Fairness threshold ±0.20 PPR | Set in `config.py`, enforced as a CI/CD hard stop | Looser than ideal for high-stakes automated decisions; tighter than unmonitored deployment. The ±0.20 threshold balances statistical reliability at small group sizes against regulatory caution. Tightening to ±0.15 would fail the American Indian group (n=68) on Virginia data — a sample size constraint, not a model failure. |
 | Virginia vs. national training data | Virginia (88,928 records) for development and initial production | Faster iteration, proven end-to-end pipeline. Virginia is not demographically representative of national populations — particularly for small racial and ethnic groups. National expansion requires one config change (`STATE_CODE="*"`) and a full fairness audit rerun. |
 
@@ -690,7 +690,7 @@ responsible-mlops-risk-engine/
 | Experiment tracking | MLflow 2.x |
 | Fairness | Custom evaluate.py — PPR, AUC per demographic group |
 | Drift monitoring | Evidently AI 0.7.x |
-| Explainability | SHAP (planned — Streamlit demo) |
+| Explainability | SHAP — global beeswarm (evaluate.py) + per-record waterfall (Streamlit demo) |
 | Infrastructure | Terraform 1.x, AWS |
 | Serving | SageMaker real-time endpoint |
 | Storage | S3 (3 buckets — raw, processed, models) |
