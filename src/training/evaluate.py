@@ -24,6 +24,11 @@ NIST AI RMF alignment:
     MANAGE 2.2  — findings documented for risk response decisions
 """
 
+import os
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend — safe for CI/CD and script runs
+import matplotlib.pyplot as plt
+import shap
 import pandas as pd
 import numpy as np
 import joblib
@@ -226,6 +231,53 @@ def run_fairness_audit(
     return results_df, passed
 
 
+
+def run_shap_analysis(
+    model,
+    X_test: pd.DataFrame,
+    output_dir: str = "docs",
+) -> None:
+    """
+    Generate SHAP global beeswarm plot for the XGBoost production model.
+
+    Beeswarm shows each feature's contribution direction and magnitude
+    across all test records — answering which features drive high vs low
+    income predictions and for whom.
+
+    NIST AI RMF MEASURE 4.1 — model explainability.
+    Output saved to docs/shap_summary.png.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    logger.info("Running SHAP explainability analysis...")
+
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer(X_test)
+
+    # --- Beeswarm plot ---
+    fig, ax = plt.subplots(figsize=(10, 6))
+    shap.plots.beeswarm(shap_values, max_display=6, show=False)
+    plt.title(
+        "SHAP Feature Importance — Income Risk Model\n"
+        "Each dot is one test record. Color = feature value. X = SHAP impact on prediction.",
+        fontsize=11, pad=15
+    )
+    plt.tight_layout()
+
+    output_path = os.path.join(output_dir, "shap_summary.png")
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    logger.info(f"SHAP beeswarm saved: {output_path}")
+
+    # --- Log mean absolute SHAP values ---
+    mean_abs_shap = pd.DataFrame({
+        "feature": X_test.columns,
+        "mean_abs_shap": np.abs(shap_values.values).mean(axis=0).round(4),
+    }).sort_values("mean_abs_shap", ascending=False)
+
+    print("\n--- SHAP Feature Importance (mean |SHAP value|) ---")
+    print(mean_abs_shap.to_string(index=False))
+
+
 def run_evaluation(
     data_dir: str = PROCESSED_DATA_DIR,
     models_dir: str = MODELS_DIR,
@@ -299,6 +351,12 @@ def run_evaluation(
             print(f"    {row['group']} — PPR: {row['ppr']} | Delta: {row['ppr_delta']}")
 
     logger.info("=" * 55)
+
+    # --- SHAP explainability ---
+    # Runs after fairness gate — non-blocking, does not affect exit code
+    # NIST AI RMF MEASURE 4.1
+    run_shap_analysis(model, X_test)
+
     logger.info(f"Evaluation complete — fairness gate: {'PASSED' if passed else 'FAILED'}")
     logger.info(f"AUC-ROC: {metrics['auc_roc']} | F1: {metrics['f1']}")
     logger.info("=" * 55)

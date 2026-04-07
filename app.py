@@ -21,6 +21,10 @@ import json
 from glob import glob
 from pathlib import Path
 
+import shap
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Income Risk Engine",
@@ -463,6 +467,38 @@ elif page == "Prediction":
                 })
                 st.dataframe(summary, width="stretch",
                              hide_index=True)
+                # --- SHAP Waterfall ---
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("**Why this prediction?**")
+                st.markdown(
+                    "<div style='font-size:0.8rem; color:#4a5568;'>"
+                    "SHAP values show which features pushed this prediction higher or lower "
+                    "than the model baseline. Red = pushed toward high income. "
+                    "Blue = pushed toward low income.</div>",
+                    unsafe_allow_html=True
+                )
+                try:
+                    _pipeline = load_pipeline()
+                    if _pipeline is not None:
+                        _model = _pipeline.named_steps["model"]
+                        # Get feature names from model — matches training column order exactly
+                        _feature_names = (
+                            list(_model.feature_names_in_)
+                            if hasattr(_model, "feature_names_in_")
+                            else ["age", "education", "occupation",
+                                  "hours_per_week", "class_of_worker", "marital_status"]
+                        )
+                        # processed is already computed above for SageMaker invocation
+                        _processed_df = pd.DataFrame(processed, columns=_feature_names)
+                        _explainer = shap.TreeExplainer(_model)
+                        _shap_values = _explainer(_processed_df)
+                        _fig, _ax = plt.subplots()
+                        shap.plots.waterfall(_shap_values[0], show=False)
+                        st.pyplot(_fig, clear_figure=True)
+                        plt.close()
+                except Exception as e:
+                    st.caption(f"SHAP explanation unavailable: {e}")
+
             else:
                 st.error("Prediction failed — model artifact not found locally.")
 

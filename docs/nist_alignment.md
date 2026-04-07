@@ -218,9 +218,22 @@ logistic regression coefficients but ranked 2nd and 4th in XGBoost feature
 importance — is documented in `docs/decision_log.md` DL-008 and justified
 the move from the interpretable baseline to XGBoost.
 
-SHAP (SHapley Additive exPlanations) is a planned addition for
-per-record explanations in the Streamlit demo — showing which features
-drove each specific prediction. Not yet implemented.
+SHAP (SHapley Additive exPlanations) is implemented at two levels:
+
+- **Global explainability** — `src/training/evaluate.py` generates a beeswarm
+  plot (`docs/shap_summary.png`) across all test records after the fairness
+  gate passes. Each dot is one record; color encodes feature value magnitude;
+  x-axis shows SHAP impact on prediction. Runs as part of the standard
+  evaluation pipeline.
+
+- **Per-record explainability** — the Streamlit demo renders a SHAP waterfall
+  plot for every prediction. The waterfall shows which features pushed the
+  specific prediction above or below the model baseline, answering the
+  question a reviewer or auditor would ask: why did the model score this
+  individual this way?
+
+Both use `shap.TreeExplainer` — the exact computation method for gradient
+boosted trees, not an approximation.
 
 ---
 
@@ -309,22 +322,22 @@ National data pull activated by setting `STATE_CODE = "*"` in `config.py`.
 
 ## Summary Table
 
-| NIST Control | Pipeline Component | Status |
-|---|---|---|
-| GOVERN 1.1 | Fairness gate in evaluate.py, decision log | ✅ |
-| GOVERN 1.4 | MLflow model registry, run lineage | ✅ |
-| GOVERN 1.7 | Sensitive feature separation in preprocess.py | ✅ |
-| MAP 1.1 | Use case scoped, income threshold documented | ✅ |
-| MAP 2.1 | Risk identification table, mitigations implemented | ✅ |
-| MAP 5.1 | Per-group impact assessment in fairness_report.md | ✅ |
-| MEASURE 2.5 | evaluate.py — PPR, AUC, F1 per demographic group | ✅ |
-| MEASURE 2.6 | drift_monitor.py — Evidently AI + CloudWatch | ✅ |
-| MEASURE 2.7 | Fairness gate enforced in CI/CD pipeline | ✅ |
-| MEASURE 4.1 | XGBoost feature importance, SHAP planned | ✅ |
-| MANAGE 1.3 | Multi-stage deployment approval gate | ✅ |
-| MANAGE 2.2 | fairness_report.md — findings + response commitments | ✅ |
-| MANAGE 2.4 | drift_monitor.py + CloudWatch alarms in Terraform | ✅ |
-| MANAGE 4.1 | Retraining triggers defined with thresholds | ✅ |
+| NIST Control | Pipeline Component |
+|---|---|
+| GOVERN 1.1 | Fairness gate in evaluate.py, decision log |
+| GOVERN 1.4 | MLflow model registry, run lineage |
+| GOVERN 1.7 | Sensitive feature separation in preprocess.py |
+| MAP 1.1 | Use case scoped, income threshold documented |
+| MAP 2.1 | Risk identification table, mitigations implemented |
+| MAP 5.1 | Per-group impact assessment in fairness_report.md |
+| MEASURE 2.5 | evaluate.py — PPR, AUC, F1 per demographic group |
+| MEASURE 2.6 | drift_monitor.py — Evidently AI + CloudWatch |
+| MEASURE 2.7 | Fairness gate enforced in CI/CD pipeline |
+| MEASURE 4.1 | XGBoost feature importance, SHAP global beeswarm + per-record waterfall |
+| MANAGE 1.3 | Multi-stage deployment approval gate |
+| MANAGE 2.2 | fairness_report.md — findings + response commitments |
+| MANAGE 2.4 | drift_monitor.py + CloudWatch alarms in Terraform |
+| MANAGE 4.1 | Retraining triggers defined with thresholds |
 
 ---
 
