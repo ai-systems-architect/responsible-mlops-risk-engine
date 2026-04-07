@@ -203,6 +203,11 @@ scale_pos_weight=2.43 corrects for this during training. Precision
   for every prediction. Shows which features pushed the specific
   individual's score above or below the model baseline.
 
+**Note on feature ranking:** `age` ranks 5th in XGBoost feature importance
+(split frequency) but 3rd in SHAP mean absolute value — indicating age has
+more actual impact on individual predictions than its tree split frequency
+suggests. SHAP is the more reliable measure of true feature contribution.
+
 ## Governance
 
 - NIST AI RMF 1.0 aligned — full mapping in `docs/nist_alignment.md`
