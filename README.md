@@ -3,7 +3,7 @@
 > Production-grade MLOps pipeline for income-based risk scoring on 2023 U.S. Census data.
 > NIST AI RMF 1.0 aligned | Demographic fairness audits | AWS SageMaker | Terraform IaC
 
-![Visitors](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fai-systems-architect%2Fresponsible-mlops-risk-engine&count_bg=%230D1117&title_bg=%23555555&icon=github.svg&icon_color=%23E7E7E7&title=visitors&edge_flat=false)
+![Visitors](https://api.visitorbadge.io/api/VisitorHit?user=ai-systems-architect&repo=responsible-mlops-risk-engine&countColor=%23263759)
 
 ---
 
