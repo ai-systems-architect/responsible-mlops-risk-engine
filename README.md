@@ -5,6 +5,8 @@
 
 ![Visitors](https://api.visitorbadge.io/api/VisitorHit?user=ai-systems-architect&repo=responsible-mlops-risk-engine&countColor=%23263759)
 
+![Streamlit Demo](docs/streamlit_demo.gif)
+
 ---
 
 ## What This Is
