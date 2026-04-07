@@ -197,20 +197,22 @@ responsible-mlops-risk-engine/
 
 ---
 
-## Deliverables
+## What's Built
 
-- ✅ End-to-end MLOps pipeline — ingest through deployment
-- ✅ Three-model progression with documented justification
-- ✅ Fairness audit — 10 demographic groups, CI/CD gate
-- ✅ MLflow experiment tracking — full artifact bundle
-- ✅ Terraform IaC — S3, IAM, CloudWatch
-- ✅ SageMaker real-time endpoint — deployed and verified
-- ✅ Evidently AI drift monitoring — CloudWatch metrics
-- ✅ NIST AI RMF 1.0 alignment document
-- ✅ Decision log — DL-001 through DL-018
-- ✅ Model card — intended use, limitations, fairness summary
-- ✅ Runbook — deployment, rollback, drift response, retraining
-- ✅ Streamlit demo
+- End-to-end MLOps pipeline — ingest through deployment
+- Three-model progression with documented justification
+- Fairness audit — 10 demographic groups, CI/CD gate
+- MLflow experiment tracking — full artifact bundle
+- Terraform IaC — S3, IAM, CloudWatch
+- SageMaker real-time endpoint — deployed and verified
+- Evidently AI drift monitoring — CloudWatch metrics
+- NIST AI RMF 1.0 alignment document
+- Decision log — DL-001 through DL-018
+- Model card — intended use, limitations, fairness summary
+- Runbook — deployment, rollback, drift response, retraining, failure modes
+- Streamlit demo
+- SHAP explainability — global beeswarm (evaluate.py) + per-record waterfall (Streamlit)
+- GitHub Environment governance gate — human approval structurally enforced in CI/CD
 
 ---
 
