@@ -24,15 +24,16 @@ NIST AI RMF alignment:
     MANAGE 2.2  — findings documented for risk response decisions
 """
 
-import os
-import matplotlib
-matplotlib.use("Agg")  # non-interactive backend — safe for CI/CD and script runs
-import matplotlib.pyplot as plt
-import shap
-import pandas as pd
-import numpy as np
-import joblib
 import logging
+import os
+
+import joblib
+import matplotlib  # noqa: E402
+matplotlib.use("Agg")  # noqa: E402 — must precede pyplot import; safe for CI/CD and script runs
+import matplotlib.pyplot as plt  # noqa: E402
+import shap  # noqa: E402
+import numpy as np
+import pandas as pd
 from glob import glob
 from sklearn.metrics import (
     roc_auc_score,
@@ -229,7 +230,6 @@ def run_fairness_audit(
     passed = len(flagged) == 0
 
     return results_df, passed
-
 
 
 def run_shap_analysis(
