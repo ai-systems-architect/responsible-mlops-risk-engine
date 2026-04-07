@@ -250,3 +250,99 @@ GitHub Actions runs on every push and pull request to `main`.
 - Deployment — manual step, requires human approval
 
 Pipeline configuration: `.github/workflows/ml-pipeline.yml`
+
+---
+
+## 10. Failure Modes
+
+The pipeline has two intentional monitoring gaps that standard procedures
+in Sections 4–6 do not cover. First, Evidently AI monitors feature
+distributions — not fairness outcomes directly. A demographic-specific
+feature shift can move a group's PPR across the gate threshold without
+triggering a drift alarm. Second, the fairness gate measures each group
+against overall PPR, not against each other — a widening inter-group gap
+is not caught by the gate until one group crosses the ±0.20 threshold.
+The scenarios below arise from these boundaries and require responses
+beyond the standard paths.
+
+### 10.1 Overnight Fairness Flip
+**Scenario:** A demographic group's PPR crosses the ±0.20 threshold
+between daily drift runs. The last drift report was clean; the next
+pipeline run fails the fairness gate.
+
+**Design context:** Evidently AI monitors feature distributions, not
+fairness metrics. A shift in occupation or hours_per_week distribution
+within a specific demographic group can move PPR without triggering
+a drift alarm first.
+
+**Response:**
+1. Do not override the gate — Section 4 applies
+2. Run drift_monitor.py manually against the current production batch
+   to identify which features moved
+3. Cross-reference the drifted features against the failing demographic
+   group — determine whether the PPR shift is explained by the feature
+   shift
+4. If explained by data shift — treat as drift-triggered retraining
+   (Section 6). Document in fairness_report.md before retraining.
+5. If unexplained — escalate. Do not retrain until root cause is
+   identified. Previous model remains live.
+
+---
+
+### 10.2 Sudden Drift Spike
+**Scenario:** drift_share jumps from 0.0 to 0.8 in a single run.
+Previous runs were clean.
+
+**Design context:** Almost always a data pipeline artifact — Census
+API field rename, variable code change, or ingest.py mapping error.
+
+**Response:**
+1. Before initiating retraining, compare ingest.py output against the
+   previous raw parquet — check feature distributions and value ranges
+2. Check Census Bureau ACS variable documentation for any field changes
+   in the current data year
+3. If pipeline artifact — fix ingest.py or preprocess.py, re-run
+   drift_monitor.py, confirm drift clears before any retraining
+4. If confirmed real — Section 6 applies
+5. Document the finding regardless of outcome
+
+---
+
+### 10.3 Endpoint Latency Spike
+**Scenario:** CloudWatch model-latency alarm fires — p99 exceeds 2000ms.
+Predictions are returning but slowly.
+
+**Response:**
+1. Check CloudWatch invocation-errors — if errors are also elevated,
+   the issue is model or container health, not load
+2. Check invocation volume — a sudden spike saturates the single-instance
+   endpoint (auto-scaling is documented future work)
+3. If volume is normal and errors are low — check SageMaker endpoint
+   logs in CloudWatch for container-level issues
+4. If unresponsive — delete and redeploy (Section 2). Model artifact
+   in S3 is unchanged — redeployment is clean.
+
+---
+
+### 10.4 PPR Gap Widens Without Gate Failure
+**Scenario:** All groups individually pass the ±0.20 gate, but the
+inter-group gap between the highest and lowest PPR groups grows across
+retraining cycles — e.g., Black or African American PPR drops from
+0.171 to 0.140 while Asian PPR rises from 0.413 to 0.450. Both still
+pass the gate. No alarm fires.
+
+**Design context:** The current gate measures each group against
+overall PPR, not against each other. A widening inter-group gap is a
+leading indicator of future gate failure and a substantive fairness
+concern regardless of gate status.
+
+**Response:**
+1. After each retraining cycle, compare per-group PPR against the
+   baseline values in docs/fairness_report.md — not just the gate threshold
+2. If the Black/Asian gap (baseline 0.242) grows by more than 0.05 in
+   any retraining cycle, flag for human review before promotion —
+   even if the gate passes
+3. Document the trend in fairness_report.md
+4. If the gap widens across two consecutive retrains — treat as a model
+   behavior issue requiring root cause investigation before the next
+   production promotion

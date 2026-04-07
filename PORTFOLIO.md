@@ -19,6 +19,30 @@ and alignment with NIST AI RMF 1.0 from day one.
 
 ---
 
+## Decision This Supports
+
+This pipeline demonstrates how income-based risk scoring should be
+governed when used in consequential contexts — program eligibility
+screening, labor market analysis, or financial risk assessment. The
+governance design reflects the standards those contexts require:
+demographic fairness enforcement, human approval gates, and a full
+audit trail.
+
+The model produces a probability score — not a binary decision. A
+human reviewer sees the score alongside the factors that drove it.
+The cost of a false negative (a qualifying individual scored below
+threshold) is denial of a program benefit. The cost of a false positive
+(a non-qualifying individual scored above threshold) is misallocated
+resources. The model is tuned toward recall (0.8546) — accepting more
+false positives to minimize missed qualifying individuals — which
+reflects the higher cost of false negatives in eligibility contexts.
+
+The fairness gate exists because automating income-based scoring
+without demographic audit exposes any deployment to disparate impact
+liability under federal civil rights standards.
+
+---
+
 ## Why This Dataset
 
 The 2023 American Community Survey Public Use Microdata Sample was a
@@ -201,6 +225,38 @@ Resources provisioned:
 - EventBridge + Lambda — drift-triggered retraining (planned)
 - CloudWatch — model performance and fairness drift alarms
 - IAM roles — least privilege, no wildcard permissions
+
+---
+
+## Designed for Generalization
+
+The pipeline is developed on Virginia data. It is designed for national
+deployment — one config change separates the two.
+
+- **National deployment:** The data layer is parameterized by `STATE_CODE`
+  in config.py. Setting `STATE_CODE="*"` scales the pipeline to ~1.5M
+  records across all 50 states. No changes to training, fairness audit,
+  MLflow registry, or Terraform infrastructure — the Virginia pipeline
+  and the national pipeline are the same pipeline.
+- **Cloud-agnostic by design:** The serving boundary is intentionally
+  narrow — all deployment-target specificity is contained in deploy.py.
+  The training pipeline, fairness layer, and MLflow registry are
+  cloud-agnostic. The same artifacts deploy to Kubernetes, Azure ML, or
+  GCP Vertex AI without modification — documented with working code in
+  architecture.md.
+- **Externalized governance thresholds:** Classification targets and
+  fairness thresholds are single values in config.py — the pipeline
+  makes no assumptions about what is being classified or what constitutes
+  acceptable fairness. A different income threshold or a tighter PPR gate
+  requires no pipeline changes.
+- **Decoupled fairness layer:** The fairness audit in evaluate.py is not
+  coupled to XGBoost. Any sklearn-compatible classifier inherits the same
+  PPR and AUC governance controls without modification — the governance
+  layer is model-agnostic.
+- **Reusable governance artifacts:** Decision log, model card, fairness
+  report, and NIST alignment document are structured templates
+  parameterized by model and dataset. A second model domain adds
+  documentation without adding process overhead.
 
 ---
 

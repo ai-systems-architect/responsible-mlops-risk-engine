@@ -20,6 +20,33 @@ or fairness layers.
 
 ---
 
+## Architectural Principles
+
+Four principles govern every design decision in this pipeline:
+
+**Separation of concerns** — Data, training, serving, and governance layers
+are independent. Each can be replaced or extended without touching the others.
+The serving layer has no dependency on sklearn transformers. The fairness
+layer has no dependency on AWS.
+
+**Fairness as a blocking control, not a reporting metric** — The fairness
+gate in `evaluate.py` exits with code 1 on failure and blocks deployment.
+A model that passes AUC thresholds but fails the fairness audit does not
+proceed. This converts a policy commitment into a structural constraint.
+
+**Reproducibility by construction** — Every parameter lives in `config.py`.
+Every decision is recorded in `docs/decision_log.md`. Every model version
+is tracked in MLflow with full artifact lineage. Reproducing any result
+requires only the repo and the `.env` file.
+
+**Human approval as a systemic requirement, not a process suggestion** —
+No automated promotion path from staging to production exists. Human sign-off
+is required before any model version reaches live traffic. This reflects the
+standard in government delivery environments where automated gates are
+necessary but not sufficient.
+
+---
+
 ## System Diagram
 
 ```
@@ -149,12 +176,34 @@ model inputs before training and used exclusively for post-prediction audit.
 The model has no access to protected attributes.
 
 `src/training/evaluate.py` computes positive prediction rate (PPR) and
-AUC-ROC for each demographic group. Groups deviating more than ±0.20 from
-the overall PPR fail the fairness gate, and the pipeline exits with code 1,
-blocking deployment.
+AUC-ROC for each demographic group. PPR is the gate metric — it directly
+operationalizes demographic parity, the standard used in EEOC and federal
+disparate impact analysis, and requires no ground truth labels for
+production monitoring. Per-group AUC validates that outcome rates are
+earned through genuine discrimination, not by chance. Recall and F1 are
+computed and reported as diagnostics but are not gate metrics — neither
+measures cross-group outcome equity, and F1 is structurally tied to each
+group's base rate regardless of model fairness. See DL-018.
+
+Groups deviating more than ±0.20 PPR from the overall rate fail the
+fairness gate and the pipeline exits with code 1, blocking deployment.
 
 **Virginia audit result: PASSED** — 0/10 groups exceeded threshold.
 Full findings in `docs/fairness_report.md`.
+
+---
+
+## Key Tradeoffs
+
+The three decisions with the most significant architectural and ethical
+consequences. Each is documented in `docs/decision_log.md` with full
+alternatives considered.
+
+| Tradeoff | Decision | What Was Traded |
+|---|---|---|
+| XGBoost vs. Logistic Regression | XGBoost selected — +4.4% AUC, +17.3% F1 | Per-feature interpretability reduced relative to logistic regression. Mitigated by XGBoost feature importance scores and planned SHAP per-record explanations. |
+| Fairness threshold ±0.20 PPR | Set in `config.py`, enforced as a CI/CD hard stop | Looser than ideal for high-stakes automated decisions; tighter than unmonitored deployment. The ±0.20 threshold balances statistical reliability at small group sizes against regulatory caution. Tightening to ±0.15 would fail the American Indian group (n=68) on Virginia data — a sample size constraint, not a model failure. |
+| Virginia vs. national training data | Virginia (88,928 records) for development and initial production | Faster iteration, proven end-to-end pipeline. Virginia is not demographically representative of national populations — particularly for small racial and ethnic groups. National expansion requires one config change (`STATE_CODE="*"`) and a full fairness audit rerun. |
 
 ---
 
@@ -198,7 +247,110 @@ terraform init
 terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
 ```
 
-Cost: ~$0.30/month standing (CloudWatch alarms only).
+Standing cost: ~$0.50/month (CloudWatch alarms + S3 storage). Full cost
+model in the Cost Model section below.
+
+---
+
+## Security Architecture
+
+### IAM Boundaries
+
+Three IAM boundaries enforced through Terraform — no console-created roles
+or wildcard permissions:
+
+| Principal | Permissions | Scope |
+|---|---|---|
+| SageMaker execution role | Read model artifacts, write CloudWatch metrics | S3 models bucket only — no access to raw or processed data |
+| Developer (AWS CLI) | Full pipeline operations | Credentials in `.env`, never in source code. Account ID scrubbed from git history. |
+| CI/CD (GitHub Actions) | Lint and structure validation only | No AWS credentials in CI/CD — deployment is a manual step by design |
+
+### Data Access Patterns
+
+Three data boundaries enforced through separate S3 buckets (DL-017):
+
+| Bucket | Content | Who Writes | Who Reads |
+|---|---|---|---|
+| S3 raw | ACS PUMS parquet — includes sensitive demographic fields | `ingest.py` | `preprocess.py` |
+| S3 processed | Engineered features — sensitive fields removed before write | `preprocess.py` | Training pipeline |
+| S3 models | Model artifacts only — no PII, no features | `deploy.py` | SageMaker execution role |
+
+Sensitive features (race, sex, nativity) are separated at preprocessing
+and are never written to the processed bucket, never passed to model
+training, and never reach the serving layer.
+
+### PII Handling
+
+ACS PUMS microdata does not include direct identifiers — no names, SSNs,
+or addresses. The dataset contains quasi-identifiers (age, occupation,
+nativity) that could contribute to re-identification at very small group
+sizes. The American Indian group (n=68 in the Virginia test set) is the
+primary small-sample risk and is explicitly flagged in `docs/fairness_report.md`
+for priority review after the national data pull.
+
+Raw data files are gitignored and stored locally. In production they would
+be written to the S3 raw bucket, where IAM bucket policies and access
+logging restrict and record all access.
+
+### Audit Logging
+
+MLflow captures the complete lineage of every model version —
+hyperparameters, training data provenance, metrics, preprocessing
+artifacts, and fairness results. Every model version can be traced back
+to the exact dataset and configuration that produced it.
+
+CloudWatch logs all SageMaker endpoint invocations. Drift reports are
+timestamped HTML artifacts that would be written to S3 for audit
+retention in production. The decision log (`docs/decision_log.md`)
+records every architectural decision with rationale, alternatives
+considered, and date — DL-001 through DL-018.
+
+---
+
+## Cost Model
+
+### Standing Costs (Infrastructure Only — No Active Endpoint)
+
+| Resource | Monthly Cost | Notes |
+|---|---|---|
+| CloudWatch alarms (4) | ~$0.40 | $0.10/alarm/month |
+| S3 storage (3 buckets) | ~$0.02 | < 1GB total across all buckets |
+| MLflow | $0 | Runs locally on developer machine |
+| **Total standing** | **~$0.50/month** | Zero compute cost when endpoint is down |
+
+### On-Demand Costs (Active Endpoint)
+
+| Resource | Cost | Notes |
+|---|---|---|
+| ml.m5.xlarge SageMaker endpoint | ~$0.23/hr (~$5.50/day) | Destroyed immediately after verification in this portfolio |
+| Optuna training (30 trials, local) | $0 | Runs on developer machine — ~25 minutes |
+| Terraform apply/destroy | ~$0 | Compute is seconds, cost is negligible |
+
+### Instance Type Rationale — ml.m5.xlarge
+
+| Instance | vCPU | RAM | Cost/hr | Assessment |
+|---|---|---|---|---|
+| ml.t3.medium | 2 | 4GB | $0.056 | Insufficient — XGBoost container + model overhead approaches memory ceiling |
+| ml.m5.large | 2 | 8GB | $0.115 | Viable for single-threaded inference; no headroom for concurrent requests |
+| **ml.m5.xlarge** | **4** | **16GB** | **$0.230** | **Selected — standard production baseline, comfortable headroom for moderate concurrency** |
+| ml.m5.2xlarge | 8 | 32GB | $0.461 | Over-provisioned for a single-model endpoint at this traffic volume |
+
+ml.m5.xlarge is the standard starting point for SageMaker real-time
+endpoints in production environments. It provides headroom for the
+XGBoost container overhead, client-side preprocessing, and moderate
+concurrent request volume without triggering auto-scaling prematurely.
+
+### Cost at Scale
+
+National deployment (STATE_CODE="*", ~1.5M records) does not change
+endpoint costs — inference is stateless per request. Training cost
+increases modestly: Optuna runs at national scale would move from local
+execution to a SageMaker Training Job (ml.m5.4xlarge, ~$0.92/hr,
+estimated 2–4 hour training run = ~$2–4 per retrain cycle).
+
+An auto-scaling policy (future work) would scale the endpoint to zero
+during off-peak hours, reducing the ~$5.50/day standing cost to near
+zero for low-traffic or batch-only deployments.
 
 ---
 
@@ -219,7 +371,7 @@ https://runtime.sagemaker.{region}.amazonaws.com
 /endpoints/{endpoint-name}/invocations
 ```
 
-The endpoint costs ~$5/day. In this portfolio it is deployed for
+The endpoint costs ~$5.50/day. In this portfolio it is deployed for
 verification and destroyed immediately after screenshot. Production
 deployment would use auto-scaling to bring instance count to zero during
 off-peak hours.

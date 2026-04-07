@@ -322,3 +322,16 @@ low-complexity projects without strict access control requirements.
 and processed buckets are provisioned for the production automation path
 where ingest.py and preprocess.py run as scheduled jobs writing to S3.
 See architecture.md Tradeoffs section.
+
+---
+## DL-018 — Fairness Metric Selection: PPR and AUC
+**Date:** 2026-03-31
+**Decision:** PPR as primary fairness gate metric; per-group AUC as
+secondary validation metric.
+
+| Metric | Role | Rationale |
+|---|---|---|
+| PPR | Primary gate | Directly operationalizes demographic parity — the standard used in EEOC 4/5ths rule and federal disparate impact analysis. Interpretable to non-technical stakeholders without ML background. Does not require ground truth labels, making it monitorable on live production predictions. |
+| AUC per group | Secondary validation | Confirms prediction quality is consistent across groups. A model could achieve equal PPR through poor discrimination — near-random predictions can produce demographic parity by chance. Per-group AUC catches this: it confirms the model earns its outcome rates, not stumbles into them. |
+| Recall | Diagnostic only | Measures true positive recovery within a group but not outcome equity across groups. The American Indian group (recall 0.90, precision 0.375) illustrates this: high recall masked systematic over-prediction — a fairness problem that recall alone would not flag as a gate failure. |
+| F1 | Diagnostic only | Structurally tied to each group's base rate. When income distributions differ across groups — as they do in Virginia ACS data — F1 will differ across groups even for a perfectly calibrated model. Equal F1 across groups is not a meaningful fairness target when base rates differ. |
