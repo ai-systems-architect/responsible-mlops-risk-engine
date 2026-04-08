@@ -5,10 +5,6 @@
 
 ![Visitors](https://api.visitorbadge.io/api/VisitorHit?user=ai-systems-architect&repo=responsible-mlops-risk-engine&countColor=%23263759)
 
-![Streamlit Demo](docs/streamlit_demo.gif)
-
-![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
-
 ---
 
 ## What This Is
@@ -102,6 +98,10 @@ risk response commitments in `docs/fairness_report.md`.
 Full control mapping in `docs/nist_alignment.md`.
 
 ---
+
+![Streamlit Demo](docs/streamlit_demo.gif)
+
+![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
 
 ## Architecture
 
