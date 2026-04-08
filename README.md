@@ -7,6 +7,8 @@
 
 ![Streamlit Demo](docs/streamlit_demo.gif)
 
+![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
+
 ---
 
 ## What This Is
@@ -264,8 +266,7 @@ one config change: `STATE_CODE = "*"` in `config.py`.
 ## Tech Stack
 
 Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP | matplotlib | pandas | joblib | boto3 | AWS SageMaker | S3 |
-CloudWatch | IAM | Terraform | GitHub Actions + Environments | Streamlit
+SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
 
 ---
 
