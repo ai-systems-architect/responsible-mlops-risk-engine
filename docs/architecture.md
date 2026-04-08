@@ -447,10 +447,15 @@ the full architectural rationale and alternatives considered.
 `src/monitoring/drift_monitor.py` runs Evidently AI drift analysis comparing
 the training distribution (reference) against incoming production data (current).
 
-Statistical tests:
-- Wasserstein distance — continuous features (age, hours_per_week)
-- Jensen-Shannon distance — categorical features (marital_status)
-- Chi-squared — remaining categorical features
+Statistical tests are selected by Evidently AI based on feature type —
+verified as appropriate for this feature set:
+
+- Wasserstein distance — continuous features (age, hours_per_week).
+  Measures magnitude of shift in the distribution.
+- Jensen-Shannon distance — categorical features (marital_status).
+  Measures % shift in distribution across categories. Score 0–1.
+- Chi-squared — remaining categorical features.
+  Compares expected vs actual counts per category.
 
 9 metrics published to CloudWatch namespace `ResponsibleRiskEngine/Drift`
 on every run. Alert threshold: drift_share > 0.20 triggers retraining
