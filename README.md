@@ -99,8 +99,6 @@ Full control mapping in `docs/nist_alignment.md`.
 
 ---
 
-![Streamlit Demo](docs/streamlit_demo.gif)
-
 ![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
 
 ## Architecture
@@ -271,3 +269,7 @@ SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Stre
 ---
 
 *NIST AI RMF 1.0 aligned. Demographic fairness audits built in from day one.*
+
+---
+
+![Streamlit Demo](docs/streamlit_demo.gif)
