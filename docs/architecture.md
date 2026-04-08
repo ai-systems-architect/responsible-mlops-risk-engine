@@ -383,7 +383,7 @@ considered, and date — DL-001 through DL-018.
 
 | Resource | Cost | Notes |
 |---|---|---|
-| ml.m5.xlarge SageMaker endpoint | ~$0.23/hr (~$5.50/day) | Destroyed immediately after verification in this portfolio |
+| ml.m5.xlarge SageMaker endpoint | approx. $0.23/hr (approx. $5.50/day) | Destroyed immediately after verification in this portfolio |
 | Optuna training (30 trials, local) | $0 | Runs on developer machine — ~25 minutes |
 | Terraform apply/destroy | ~$0 | Compute is seconds, cost is negligible |
 
@@ -410,7 +410,7 @@ execution to a SageMaker Training Job (ml.m5.4xlarge, ~$0.92/hr,
 estimated 2–4 hour training run = ~$2–4 per retrain cycle).
 
 An auto-scaling policy (future work) would scale the endpoint to zero
-during off-peak hours, reducing the ~$5.50/day standing cost to near
+during off-peak hours, reducing the approx. $5.50/day standing cost to near
 zero for low-traffic or batch-only deployments.
 
 ---
@@ -432,7 +432,7 @@ https://runtime.sagemaker.{region}.amazonaws.com
 /endpoints/{endpoint-name}/invocations
 ```
 
-The endpoint costs ~$5.50/day. In this portfolio it is deployed for
+The endpoint costs approx. $5.50/day. In this portfolio it is deployed for
 verification and destroyed immediately after screenshot. Production
 deployment would use auto-scaling to bring instance count to zero during
 off-peak hours.
