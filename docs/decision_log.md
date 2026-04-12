@@ -208,6 +208,26 @@ This is the documented production path. Federal pilots always start with a state
 before going national — this approach reflects real government delivery practice.
 
 ---
+## DL-013 — Streamlit Demo Uses SageMaker Endpoint with Local Pipeline Fallback
+**Date:** 2026-03-19
+**Decision:** The Streamlit demo (app.py) attempts live inference via the SageMaker
+real-time endpoint and silently falls back to the local sklearn Pipeline when the
+endpoint is offline.
+**Rationale:** The SageMaker endpoint costs ~$5.50/day and is deployed only for
+portfolio verification, not kept running continuously. The Streamlit demo must remain
+functional for evaluators after the endpoint has been destroyed.
+
+The local full sklearn Pipeline (`full_pipeline_*.joblib`) produces predictions
+identical to the SageMaker endpoint (delta < 0.001 — confirmed in DL-011). Using it
+as a fallback provides:
+- Zero additional cost when endpoint is offline
+- No degradation in prediction quality
+- Seamless demo experience regardless of endpoint state
+
+The fallback is silent by design — the demo surface area remains the same whether
+inference is served from SageMaker or locally.
+
+---
 ## DL-014 — SageMaker Endpoint Receives Preprocessed Inputs
 **Date:** 2026-03-20
 **Decision:** SageMaker endpoint accepts preprocessed inputs. Full sklearn Pipeline

@@ -676,7 +676,7 @@ responsible-mlops-risk-engine/
 │   └── outputs.tf
 │
 └── docs/
-    ├── decision_log.md               # DL-001 through DL-017
+    ├── decision_log.md               # DL-001 through DL-018
     ├── fairness_report.md            # Stakeholder fairness audit
     ├── nist_alignment.md             # NIST AI RMF 1.0 mapping
     ├── architecture.md               # This document
