@@ -152,7 +152,7 @@ costs ~$5/day — deployed on demand and destroyed immediately after use.
 | Decision | Rationale |
 |---|---|
 | ACS PUMS 2023 | Official Census Bureau microdata — current, annually updated, income threshold and demographics grounded in 2023 |
-| person_weight as sample_weight | Census sampling artifact — passed to XGBoost for population representativeness, not a model input |
+| person_weight as sample_weight | Census sampling artifact — passed to XGBoost for population representativeness |
 | Fairness gate in CI/CD | Demographic audit is a deployment requirement, not a report |
 | Native XGBoost JSON format for SageMaker | Eliminates container script-loading issues — booster loaded directly, no custom inference script needed |
 | SageMaker SDK pinned to 2.x | SDK 3.x is a complete API rewrite released early 2026 — too new for production use |
