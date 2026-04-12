@@ -215,3 +215,4 @@ suggests. SHAP is the more reliable measure of true feature contribution.
 - Fairness report: `docs/fairness_report.md`
 - All model versions tracked in MLflow registry
 - Production promotion requires explicit human sign-off
+- ATO package: NIST SP 800-53 Rev. 5 and AI RMF 1.0 mapped — Federal_ATO_Package_Responsible_MLOps_v1.0.pdf

@@ -21,6 +21,8 @@ The NIST AI RMF organizes AI risk management into four functions:
 | **MEASURE** | Analyze and assess AI risks with quantitative and qualitative methods |
 | **MANAGE** | Prioritize and address AI risks with documented responses |
 
+A full Federal ATO package mapped to this framework is available as Federal_ATO_Package_Responsible_MLOps_v1.0.pdf in the repository root.
+
 ---
 
 ## GOVERN

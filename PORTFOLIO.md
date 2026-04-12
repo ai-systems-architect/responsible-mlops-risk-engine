@@ -195,9 +195,7 @@ Full alignment document: `docs/nist_alignment.md`
 
 ## ATO Documentation Package
 
-A six-document Authorization to Operate package generated against
-the P1 architecture as a portfolio artifact. Demonstrates familiarity
-with the federal authorization process beyond technical implementation.
+A full-lifecycle Authority to Operate (ATO) package mapped to NIST SP 800-53 Rev. 5 and NIST AI RMF 1.0 controls. Baseline: FIPS 199 Moderate. Covers SSP, PIA, RAR, POA&M, AI Impact Assessment, and SAP. Demonstrates the documentation architecture required for federal AI system authorization beyond technical implementation.
 
 | Document | Purpose |
 |----------|---------|

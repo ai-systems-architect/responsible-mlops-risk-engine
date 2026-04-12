@@ -218,6 +218,23 @@ responsible-mlops-risk-engine/
 
 ---
 
+## Federal ATO Documentation Package
+
+A full-lifecycle Authority to Operate (ATO) package mapped to NIST SP 800-53 Rev. 5 and NIST AI RMF 1.0 controls for a FIPS 199 Moderate-impact environment. Demonstrates the documentation architecture required for federal AI system authorization.
+
+| Document | Purpose |
+|---|---|
+| System Security Plan (SSP) | NIST 800-53 control mapping to pipeline architecture |
+| Privacy Impact Assessment (PIA) | Data handling and PII risk analysis |
+| Risk Assessment Report (RAR) | Threat identification and residual risk |
+| Plan of Action & Milestones (POA&M) | Open findings and remediation schedule |
+| AI Impact Assessment | NIST AI RMF alignment and AI-specific risk |
+| Security Assessment Plan (SAP) | Testing methodology and assessment scope |
+
+[View ATO Package](Federal_ATO_Package_Responsible_MLOps_v1.0.pdf)
+
+---
+
 ## Local Setup
 
 ```bash
