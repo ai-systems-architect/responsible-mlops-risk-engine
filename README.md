@@ -7,6 +7,12 @@
 
 ---
 
+## Article
+
+[From Model Accuracy to System Accountability: Designing Governed AI Systems](ARTICLE.md)
+
+An architectural perspective on building governed ML systems for regulated environments — fairness enforcement, explainability, human-in-the-loop controls, and federal compliance alignment.
+
 ## What This Is
 
 A complete, auditable MLOps pipeline for income-based risk scoring built on
