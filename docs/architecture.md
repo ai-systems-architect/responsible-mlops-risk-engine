@@ -106,6 +106,10 @@ necessary but not sufficient.
 └──────────────────────────────────────────────────────────────────── ┘
 ```
 
+![Responsible MLOps Pipeline Architecture](Responsible_MLops_pipeline_architecture.png)
+
+*Rendered view of the four-layer pipeline: Data → Training → Serving → Monitoring.*
+
 ---
 
 ## Data Flow
