@@ -1,5 +1,7 @@
-# responsible-mlops-risk-engine
-## End-to-End MLOps Pipeline — Income Risk Scoring
+# From Model Accuracy to System Accountability
+*Responsible MLOps Risk Engine — Designing Governed AI Systems*
+
+**End-to-End MLOps Pipeline — Income Risk Scoring**
 
 **Raghunath Devayajanam**
 GitHub: https://github.com/ai-systems-architect/responsible-mlops-risk-engine

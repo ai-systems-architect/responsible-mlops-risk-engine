@@ -1,4 +1,5 @@
-# responsible-mlops-risk-engine
+# From Model Accuracy to System Accountability
+*Responsible MLOps Risk Engine — Designing Governed AI Systems*
 
 > Production-grade MLOps pipeline for income-based risk scoring on 2023 U.S. Census data.
 > NIST AI RMF 1.0 aligned | Demographic fairness audits | AWS SageMaker | Terraform IaC

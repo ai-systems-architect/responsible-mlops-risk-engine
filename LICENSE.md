@@ -1,4 +1,9 @@
-# License
+# From Model Accuracy to System Accountability
+*Responsible MLOps Risk Engine — Designing Governed AI Systems*
+
+---
+
+## License
 
 MIT License
 
