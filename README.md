@@ -14,6 +14,12 @@
 
 An architectural perspective on building governed ML systems for regulated environments — fairness enforcement, explainability, human-in-the-loop controls, and federal compliance alignment.
 
+## Companion Project
+
+[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
+
+A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
+
 ## What This Is
 
 A complete, auditable MLOps pipeline for income-based risk scoring built on

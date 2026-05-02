@@ -8,6 +8,14 @@ GitHub: https://github.com/ai-systems-architect/responsible-mlops-risk-engine
 
 ---
 
+## Companion Project
+
+[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
+
+A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
+
+---
+
 ## What This Is
 
 A production-grade MLOps pipeline for income-based risk scoring built on
