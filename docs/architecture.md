@@ -624,6 +624,22 @@ during off-peak hours to minimize cost.
 
 **Future work:** Add auto-scaling policy to infrastructure/main.tf.
 
+### Deployment Patterns — Single Instance Rollout
+The SageMaker endpoint is updated in place via `client.models.create_or_update`.
+For low-traffic development this is acceptable, but production model updates
+require zero-downtime rollout and rapid rollback if the new model misbehaves
+on live traffic. The current single-instance endpoint configuration cannot
+route traffic across model variants, so a rollback today means redeploying
+the previous artifact and accepting brief downtime.
+
+**Future work:** Update the SageMaker endpoint configuration to support
+production variants with traffic weighting. Implement canary rollout —
+route a small fraction of traffic to the new model for a defined soak
+window, monitor CloudWatch alarms and live fairness metrics, then promote
+to 100% on success or auto-rollback to the previous variant on alarm.
+Blue-green (parallel variant, atomic shift, retained rollback) is the
+alternative pattern for higher-risk updates.
+
 ### Client Layer — Streamlit
 Streamlit is used for portfolio demonstration. It is single-threaded
 and not designed for production traffic. In a production deployment
