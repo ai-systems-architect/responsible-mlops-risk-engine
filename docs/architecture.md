@@ -638,7 +638,9 @@ route a small fraction of traffic to the new model for a defined soak
 window, monitor CloudWatch alarms and live fairness metrics, then promote
 to 100% on success or auto-rollback to the previous variant on alarm.
 Blue-green (parallel variant, atomic shift, retained rollback) is the
-alternative pattern for higher-risk updates.
+alternative pattern for higher-risk updates. See DL-019 (decision_log.md)
+and runbook §7 Rollback for the deferred strategy and incident response
+procedure.
 
 ### Client Layer — Streamlit
 Streamlit is used for portfolio demonstration. It is single-threaded

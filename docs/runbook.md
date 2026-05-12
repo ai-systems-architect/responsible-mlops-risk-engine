@@ -216,6 +216,31 @@ automatically replace the production model.
 **No automated promotion path exists by design.** CI/CD gates are
 necessary but not sufficient for production promotion. See DL-015.
 
+**Rollback — Bad Model Promotion:**
+
+Trigger conditions (any of):
+- CloudWatch alarm fires within first 24 hours post-promotion
+- Live PPR drift exceeds 0.10 threshold for a protected group
+- Endpoint error rate or latency above prior baseline by >50%
+- Explicit human escalation from monitoring on-call
+
+Rollback steps:
+
+1. Retrieve previous Production model URI from MLflow registry — version
+   history of `models:/risk_engine/Production` before the current promotion
+2. Re-run deploy.py against the previous model URI — overwrites the
+   SageMaker endpoint in place (~6 minutes of unavailability)
+3. Verify endpoint returns expected probabilities on a known X_test row
+4. Demote the bad model in MLflow from Production to Archived — retain
+   the artifact for incident review, do not delete
+5. Record the incident in decision_log.md — what failed, what was rolled
+   back, what must change before re-promotion
+
+In the current single-instance deployment, rollback incurs ~6 minutes of
+downtime. Zero-downtime rollback is the motivator for the canary /
+blue-green pattern documented in architecture.md (Deployment Patterns —
+Single Instance Rollout) and DL-019.
+
 ---
 
 ## 8. Local Inference (Streamlit / Batch)

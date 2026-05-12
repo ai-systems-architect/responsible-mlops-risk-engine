@@ -357,3 +357,39 @@ secondary validation metric.
 | AUC per group | Secondary validation | Confirms prediction quality is consistent across groups. A model could achieve equal PPR through poor discrimination — near-random predictions can produce demographic parity by chance. Per-group AUC catches this: it confirms the model earns its outcome rates, not stumbles into them. |
 | Recall | Diagnostic only | Measures true positive recovery within a group but not outcome equity across groups. The American Indian group (recall 0.90, precision 0.375) illustrates this: high recall masked systematic over-prediction — a fairness problem that recall alone would not flag as a gate failure. |
 | F1 | Diagnostic only | Structurally tied to each group's base rate. When income distributions differ across groups — as they do in Virginia ACS data — F1 will differ across groups even for a perfectly calibrated model. Equal F1 across groups is not a meaningful fairness target when base rates differ. |
+
+---
+## DL-019 — Production Rollout Strategy Deferred to Canary
+**Date:** 2026-05-02
+**Decision:** Current model promotion uses single-instance in-place update.
+Canary rollout with traffic weighting and blue-green deployment are deferred
+to production hardening.
+**Rationale:** Single-instance in-place update is appropriate for the
+development verification posture — low traffic, narrow user base, manual
+human approval before each promotion. The known limitations are:
+
+- Promotion incurs ~6 minutes of endpoint unavailability while SageMaker
+  swaps the underlying model artifact
+- Rollback uses the same in-place mechanism, so a bad model in production
+  causes a second outage during recovery
+- New models receive 100% of traffic immediately on promotion — no
+  graduated exposure, no fast detection window before full impact
+
+Production hardening implements canary rollout — a small fraction of
+traffic to the new variant for a defined soak window, monitored against
+CloudWatch alarms and live fairness metrics, then promoted to 100% on
+success or auto-rolled back to the previous variant on alarm. Blue-green
+deployment (parallel variant, atomic shift, retained rollback artifact)
+is the alternative pattern for higher-risk updates where graduated
+exposure is not acceptable.
+
+Implementation requires:
+1. deploy.py updates to register canary variants instead of replacing
+   the production variant
+2. infrastructure/main.tf rollout policy — soak window, success criteria,
+   auto-rollback triggers
+3. Runbook §7 rollback updated to use traffic shift instead of in-place
+   redeploy
+
+See architecture.md Tradeoffs — Deployment Patterns — Single Instance
+Rollout, and runbook §7 Rollback.
