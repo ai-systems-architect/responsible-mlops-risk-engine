@@ -3,7 +3,7 @@
 
 **End-to-End MLOps Pipeline — Income Risk Scoring**
 
-**Raghunath Devayajanam**
+**Raghu Devayajanam · April 8, 2026**
 GitHub: https://github.com/ai-systems-architect/responsible-mlops-risk-engine
 
 ---

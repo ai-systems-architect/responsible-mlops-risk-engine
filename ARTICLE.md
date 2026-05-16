@@ -1,6 +1,6 @@
 # From Model Accuracy to System Accountability: Designing Governed AI Systems
 
-**Raghunath Devayajanam · April 2026**
+**Raghu Devayajanam · April 8, 2026**
 
 ---
 

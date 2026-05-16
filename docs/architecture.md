@@ -4,7 +4,7 @@
 ## responsible-mlops-risk-engine
 
 **Date:** 2026-03-19
-**Author:** Raghunath Devayajanam
+**Author:** Raghu Devayajanam
 
 ---
 

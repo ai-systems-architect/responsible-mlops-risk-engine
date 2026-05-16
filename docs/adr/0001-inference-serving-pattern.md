@@ -2,7 +2,7 @@
 
 **Status:** Target Design (canary/blue-green deferred to production hardening per DL-019)
 **Date:** 2026-05-16
-**Deciders:** Raghunath Devayajanam
+**Deciders:** Raghu Devayajanam
 **Related:** DL-019, DL-020, architecture.md § Deployment Patterns, runbook.md §7
 
 ---

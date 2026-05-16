@@ -7,7 +7,7 @@
 
 MIT License
 
-Copyright (c) 2026 Raghunath Devayajanam
+Copyright (c) 2026 Raghu Devayajanam
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ derived from this data.
 ## Additional Terms
 
 - **Attribution:** If you use or reference this project, please cite:
-  Raghunath Devayajanam, *responsible-mlops-risk-engine*, 2026,
+  Raghu Devayajanam, *responsible-mlops-risk-engine*, 2026,
   https://github.com/ai-systems-architect/responsible-mlops-risk-engine
 
 - **No Warranty:** This software is provided for portfolio and educational
