@@ -375,21 +375,7 @@ human approval before each promotion. The known limitations are:
 - New models receive 100% of traffic immediately on promotion — no
   graduated exposure, no fast detection window before full impact
 
-Production hardening implements canary rollout — a small fraction of
-traffic to the new variant for a defined soak window, monitored against
-CloudWatch alarms and live fairness metrics, then promoted to 100% on
-success or auto-rolled back to the previous variant on alarm. Blue-green
-deployment (parallel variant, atomic shift, retained rollback artifact)
-is the alternative pattern for higher-risk updates where graduated
-exposure is not acceptable.
-
-Implementation requires:
-1. deploy.py updates to register canary variants instead of replacing
-   the production variant
-2. infrastructure/main.tf rollout policy — soak window, success criteria,
-   auto-rollback triggers
-3. Runbook §7 rollback updated to use traffic shift instead of in-place
-   redeploy
+Target design — see ADR-0001 (docs/adr/0001-inference-serving-pattern.md).
 
 See architecture.md Tradeoffs — Deployment Patterns — Single Instance
 Rollout, and runbook §7 Rollback. Serving pattern selection: see DL-020.
@@ -429,3 +415,5 @@ remains an option for non-interactive workloads but is out of current scope.
 How this endpoint is promoted to production is governed separately —
 canary rollout with traffic weighting and blue-green deployment are the
 target design, deferred to production hardening. See DL-019.
+
+Rollback strategy and canary promotion target design — see ADR-0001 (docs/adr/0001-inference-serving-pattern.md).

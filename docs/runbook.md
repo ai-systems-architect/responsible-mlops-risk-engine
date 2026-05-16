@@ -239,7 +239,8 @@ Rollback steps:
 In the current single-instance deployment, rollback incurs ~6 minutes of
 downtime. Zero-downtime rollback is the motivator for the canary /
 blue-green pattern documented in architecture.md (Deployment Patterns —
-Single Instance Rollout) and DL-019.
+Single Instance Rollout) and DL-019. See also ADR-0001
+(docs/adr/0001-inference-serving-pattern.md) for the target design narrative.
 
 ---
 
