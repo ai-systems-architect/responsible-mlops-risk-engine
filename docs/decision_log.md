@@ -392,4 +392,40 @@ Implementation requires:
    redeploy
 
 See architecture.md Tradeoffs — Deployment Patterns — Single Instance
-Rollout, and runbook §7 Rollback.
+Rollout, and runbook §7 Rollback. Serving pattern selection: see DL-020.
+
+---
+## DL-020 — Serving Pattern Selection (Real-time vs Batch vs Serverless)
+**Date:** 2026-05-16
+**Decision:** SageMaker real-time inference endpoint selected as the serving
+pattern, over batch transform and serverless inference.
+
+**Note:** This is a backfilled documentation entry. The decision was made
+during initial build in March 2026 and is encoded in `src/serving/deploy.py`
+and the architecture.md Serving section. DL-020 captures the rationale and
+alternatives evaluated for completeness.
+
+**Rationale:** Three SageMaker serving patterns were evaluated for the
+income risk scoring use case. The use case is synchronous decision support
+— a program eligibility check that cannot wait for batch results or tolerate
+cold-start latency on the first live request.
+
+| Pattern | Latency | Cost | Use Case Fit |
+|---|---|---|---|
+| Real-time endpoint (selected) | Sub-second, persistent endpoint, no cold start | ~$5.50/day on ml.m5.xlarge when active | Synchronous request/response — fits decision-support scoring directly. Always-on, predictable latency under live traffic. |
+| Batch transform | Minutes to hours, depends on input volume | Pay-per-job, no idle cost | Periodic bulk re-scoring — appropriate for the future national re-scoring phase (annual or quarterly re-scoring of ~1.5M records). Rejected for live screening because a screening decision cannot wait minutes. |
+| Serverless inference | 1–5 second cold start on first request after idle period, sub-second thereafter | Pay-per-invocation, cheaper at low request volumes | Low-frequency, latency-tolerant workloads — audit batch jobs or admin tooling. Rejected for live screening because cold start latency is unacceptable for interactive eligibility requests. |
+
+Real-time selected because the screening use case demands synchronous
+response — a caseworker or eligibility worker cannot wait. The ~$5.50/day
+cost is acceptable for production. For portfolio demonstration the
+destroy-immediately pattern keeps the endpoint provisioned only during
+verification runs.
+
+Batch transform remains the documented future pattern for national
+re-scoring — see architecture.md Tradeoffs — National Scale. Serverless
+remains an option for non-interactive workloads but is out of current scope.
+
+How this endpoint is promoted to production is governed separately —
+canary rollout with traffic weighting and blue-green deployment are the
+target design, deferred to production hardening. See DL-019.
