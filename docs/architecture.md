@@ -22,6 +22,40 @@ or fairness layers.
 
 ---
 
+## System Context
+
+### Who Uses It
+
+| Role | Access Level | Primary Interaction |
+|---|---|---|
+| ML team | Local pipeline + MLflow | Trains, evaluates, and registers model versions |
+| Responsible AI Reviewer | Drift reports + fairness audit outputs | Monthly per-group PPR review, escalation authority on fairness drift |
+| Program analysts (intended production users) | SageMaker endpoint or Streamlit demo | Submit records for scoring, consume probability scores |
+| Oversight bodies | Decision log, fairness report, MLflow run history | Audit architectural decisions and fairness evidence on request |
+
+### External Systems
+
+| System | Direction | Purpose |
+|---|---|---|
+| U.S. Census Bureau API (api.census.gov) | Inbound | ACS PUMS 2023 ingestion — read-only, public data |
+| AWS S3 | Outbound (current) | Model artifacts written by deploy.py and read by SageMaker. Raw and processed feature buckets provisioned for the production automation path (see Tradeoffs — Pipeline Execution — Local Scripts) |
+| AWS SageMaker | Outbound | Real-time inference endpoint hosting |
+| AWS CloudWatch | Outbound | Drift metrics and three operational alarms |
+| MLflow (local) | Bidirectional | Experiment tracking and model registry |
+| GitHub Actions | Outbound | CI/CD — flake8 lint, structure validation, and GitHub Environments deployment-approval gate |
+| Evidently AI | Internal | Drift detection against training distribution |
+
+### What It Does Not Do
+
+- Does not make autonomous decisions — all model outputs require human review before consequential action
+- Does not store individual predictions — inference results are returned to the caller and not persisted
+- Does not use race, sex, or nativity as model inputs — physically separated at preprocessing, used only for post-prediction fairness auditing (DL-014)
+- Does not auto-promote models — every version requires explicit human sign-off before production deployment, no automated promotion path exists (DL-015)
+- Does not cover national data — scoped to Virginia FIPS 51, national expansion requires separate fairness audit and authorization action (DL-012)
+- Does not replace human judgment — probability scores are one input to a decision process, not the decision itself (model_card.md intended use)
+
+---
+
 ## Architectural Principles
 
 Four principles govern every design decision in this pipeline:
