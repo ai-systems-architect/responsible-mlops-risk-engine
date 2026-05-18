@@ -362,3 +362,14 @@ context would be presented to a human reviewer before any consequential
 action is taken.
 
 ![Streamlit Demo](docs/streamlit_demo.gif)
+
+---
+
+## Resources
+
+| Resource | Link |
+|---|---|
+| Portfolio — Project Overview | [raghudevayajanam.com](https://raghudevayajanam.com/work/responsible-mlops-risk-engine/) |
+| Article — System Accountability | [raghudevayajanam.com/writing/system-accountability](https://raghudevayajanam.com/writing/system-accountability/) |
+| Article — Authorizing AI in Federal Environments | [raghudevayajanam.com/writing/authorizing-ai-federal-environments](https://raghudevayajanam.com/writing/authorizing-ai-federal-environments) |
+| ATO Reference Package | [Federal_ATO_Package_Responsible_MLOps_v1.0.pdf](./Federal_ATO_Package_Responsible_MLOps_v1.0.pdf) |
