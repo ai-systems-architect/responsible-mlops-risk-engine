@@ -347,4 +347,18 @@ SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Stre
 
 ---
 
+> This demo simulates an income risk scoring workflow for a federal
+> benefits eligibility system — with real-time fairness audit output
+> and SHAP-based explainability for every prediction.
+
+## Demo
+
+The demo accepts individual records and returns a probability score, an
+input summary, and a per-prediction SHAP waterfall explaining which
+features pushed the score higher or lower. A separate **Fairness Audit**
+tab shows the per-group PPR breakdown used to vet the model before
+deployment — illustrating how decision-support output and governance
+context would be presented to a human reviewer before any consequential
+action is taken.
+
 ![Streamlit Demo](docs/streamlit_demo.gif)
