@@ -99,6 +99,51 @@ risk response commitments in `docs/fairness_report.md`.
 
 ---
 
+## Governance Outcomes
+
+Buyers and federal reviewers read governance outcomes differently from
+performance metrics. For a decision-support system in a regulated context,
+the fairness gate pass rate and the ATO documentation package are as
+significant as AUC and F1 — they answer *whether the system can be
+deployed*, not just *whether it predicts well*. The four dimensions below
+summarize the system's governance posture at a glance.
+
+**Model Performance**
+
+| Metric | Value |
+|---|---|
+| AUC-ROC | 0.9506 |
+| F1 | 0.7633 |
+| Precision | 0.6896 |
+| Recall | 0.8546 |
+
+**Fairness Gate Result**
+
+| Item | Value |
+|---|---|
+| Status | PASSED |
+| Groups evaluated | 10 (6 race · 2 sex · 2 nativity) |
+| Groups exceeding ±0.20 PPR threshold | 0 |
+| PPR delta range across race groups | 0.167 (Some other race alone) — 0.413 (Asian alone) |
+| Overall PPR | 0.2686 |
+
+**Governance Controls Verified**
+
+- Fairness gate enforced in CI/CD — `evaluate.py` exits code 1 on failure
+- Sensitive features physically separated at preprocessing — never used as model inputs (DL-014)
+- Four-stage deployment approval gate — human sign-off required before production (`docs/nist_alignment.md` § MANAGE 1.3)
+- Drift monitoring active — `DriftShare`, `DriftedFeatures`, `DatasetDrift`, plus per-feature drift indicators published to CloudWatch per run; retraining threshold `drift_share > 0.20`
+
+**ATO Authorization Package**
+
+| Item | Value |
+|---|---|
+| FIPS 199 impact level | Moderate |
+| Frameworks | NIST SP 800-53 Rev. 5 + NIST AI RMF 1.0 |
+| Package | [Federal_ATO_Package_Responsible_MLOps_v1.0.pdf](Federal_ATO_Package_Responsible_MLOps_v1.0.pdf) — component breakdown in the [Federal ATO Documentation Package](#federal-ato-documentation-package) section below |
+
+---
+
 ## NIST AI RMF 1.0 Alignment
 
 | Function | Implementation |
