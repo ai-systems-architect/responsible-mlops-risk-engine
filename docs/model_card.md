@@ -213,7 +213,7 @@ suggests. SHAP is the more reliable measure of true feature contribution.
 ## Governance
 
 - NIST AI RMF 1.0 aligned — full mapping in `docs/nist_alignment.md`
-- Decision log: DL-001 through DL-020 — `docs/decision_log.md`
+- Decision log: `docs/decision_log.md`
 - Fairness report: `docs/fairness_report.md`
 - All model versions tracked in MLflow registry
 - Production promotion requires explicit human sign-off
