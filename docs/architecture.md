@@ -404,7 +404,7 @@ CloudWatch logs all SageMaker endpoint invocations. Drift reports are
 timestamped HTML artifacts that would be written to S3 for audit
 retention in production. The decision log (`docs/decision_log.md`)
 records every architectural decision with rationale, alternatives
-considered, and date — DL-001 through DL-018.
+considered, and date — DL-001 through DL-020.
 
 **Production hardening — not implemented in this portfolio:**
 - KMS encryption at rest on S3 buckets
@@ -730,7 +730,7 @@ responsible-mlops-risk-engine/
 │   └── outputs.tf
 │
 └── docs/
-    ├── decision_log.md               # DL-001 through DL-018
+    ├── decision_log.md               # DL-001 through DL-020
     ├── fairness_report.md            # Stakeholder fairness audit
     ├── nist_alignment.md             # NIST AI RMF 1.0 mapping
     ├── architecture.md               # This document

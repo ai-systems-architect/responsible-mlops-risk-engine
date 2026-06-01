@@ -148,7 +148,7 @@ summarize the system's governance posture at a glance.
 
 | Function | Implementation |
 |---|---|
-| GOVERN | Decision log DL-001 to DL-018, sensitive feature separation, MLflow lineage |
+| GOVERN | Decision log DL-001 to DL-020, sensitive feature separation, MLflow lineage |
 | MAP | Risk identification table, use case scoping, impact assessment per demographic group |
 | MEASURE | Per-group PPR and AUC, fairness gate in CI/CD, Evidently AI drift monitoring |
 | MANAGE | Multi-stage deployment approval, retraining triggers, CloudWatch alarms |
@@ -247,7 +247,7 @@ responsible-mlops-risk-engine/
 │   ├── variables.tf
 │   └── outputs.tf
 └── docs/
-    ├── decision_log.md          # DL-001 through DL-018
+    ├── decision_log.md          # DL-001 through DL-020
     ├── fairness_report.md       # Stakeholder fairness audit
     ├── nist_alignment.md        # NIST AI RMF 1.0 mapping
     ├── architecture.md          # System design
@@ -267,7 +267,7 @@ responsible-mlops-risk-engine/
 - SageMaker real-time endpoint — deployed and verified
 - Evidently AI drift monitoring — CloudWatch metrics
 - NIST AI RMF 1.0 alignment document
-- Decision log — DL-001 through DL-018
+- Decision log — DL-001 through DL-020
 - Model card — intended use, limitations, fairness summary
 - Runbook — deployment, rollback, drift response, retraining, failure modes
 - Streamlit demo
