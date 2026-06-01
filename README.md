@@ -10,7 +10,7 @@
 
 ## Article
 
-[From Model Accuracy to System Accountability: Designing Governed AI Systems](ARTICLE.md)
+[Beyond Predictions: From Model Accuracy to System Accountability](ARTICLE.md)
 
 An architectural perspective on building governed ML systems for regulated environments — fairness enforcement, explainability, human-in-the-loop controls, and federal compliance alignment.
 

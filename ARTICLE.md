@@ -1,4 +1,5 @@
-# From Model Accuracy to System Accountability: Designing Governed AI Systems
+# Beyond Predictions: From Model Accuracy to System Accountability
+*Designing Governed AI Systems*
 
 **Raghu Devayajanam · April 8, 2026**
 
