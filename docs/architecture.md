@@ -225,6 +225,26 @@ hours worked that logistic regression cannot capture.
 Best parameters: n_estimators 403, max_depth 5, learning_rate 0.043,
 scale_pos_weight 2.43 (handles class imbalance).
 
+**Optuna search space — 8 hyperparameters, each range chosen deliberately:**
+
+| Parameter | Range | Rationale |
+|---|---|---|
+| `n_estimators` | 100–500 | Standard tree count for tabular data at this scale |
+| `max_depth` | 3–8 | Controls interaction order — depth 3 captures pairwise, depth 8 catches 3-way and higher |
+| `learning_rate` | 0.01–0.3, log scale | Log scale because impact is multiplicative — small absolute differences at the low end matter more than at the high end |
+| `subsample` | 0.6–1.0 | Row subsampling — regularization against overfitting |
+| `colsample_bytree` | 0.6–1.0 | Column subsampling per tree — same regularization role on the feature axis |
+| `min_child_weight` | 1–10 | Minimum sum of instance weight per leaf — floor on leaf size |
+| `gamma` | 0.0–1.0 | Minimum split gain — pruning aggressiveness |
+| `scale_pos_weight` | 1.0–5.0 | Class imbalance handling — only ~27% of training records are above the $75K threshold |
+
+Search method is Optuna's default Tree-structured Parzen Estimator (TPE),
+evaluated via 5-fold stratified cross-validated AUC on the training set.
+Best parameters are then refit on the full training set and scored once
+on the held-out test set — no test data ever enters the hyperparameter
+search. Trial budget is 30 locally (`OPTUNA_TRIALS_LOCAL`) and 5 in CI
+(`OPTUNA_TRIALS_CI`) — CI proves the pipeline runs, not finds the best model.
+
 ---
 
 ## Fairness Enforcement
