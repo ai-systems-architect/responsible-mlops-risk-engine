@@ -374,3 +374,33 @@ concern regardless of gate status.
 4. If the gap widens across two consecutive retrains — treat as a model
    behavior issue requiring root cause investigation before the next
    production promotion
+
+### 10.5 Stranded SageMaker Endpoint
+**Scenario:** `deploy.py` creates the endpoint successfully but crashes
+or is interrupted before the teardown step at the end of the script.
+The endpoint remains live, billing approx. $5.50/day until manually
+discovered and destroyed. No CloudWatch alarm fires because the endpoint
+is operating normally — only the operator's expectation has been broken.
+
+**Detection:**
+- Daily check: `aws sagemaker list-endpoints --region <region>`
+- AWS billing dashboard cost anomaly after 1-2 days
+- The `endpoint-availability` alarm continues reporting healthy — it
+  cannot distinguish "endpoint we want running" from "endpoint left running"
+
+**Response:**
+1. List active endpoints — confirm the stranded endpoint name
+2. Manually delete the endpoint, its config, and the registered model:
+   ```
+   aws sagemaker delete-endpoint --endpoint-name responsible-risk-engine-prod-v1
+   aws sagemaker delete-endpoint-config --endpoint-config-name responsible-risk-engine-prod-v1
+   aws sagemaker delete-model --model-name <model-name-from-list-models>
+   ```
+3. Verify deletion — `list-endpoints` returns no match
+4. Record the incident in decision_log.md if the failure is recurring or
+   tied to a reproducible failure mode in `deploy.py`
+
+**Production hardening:** Wrap the `deploy()` orchestrator in a
+try/finally so endpoint teardown runs even on script failure. Not
+implemented in this portfolio — the destroy-immediately pattern (DL-013)
+assumes manual operator attention throughout the script lifecycle.

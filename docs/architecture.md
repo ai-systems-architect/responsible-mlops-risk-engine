@@ -409,6 +409,14 @@ sizes. The American Indian group (n=68 in the Virginia test set) is the
 primary small-sample risk and is explicitly flagged in `docs/fairness_report.md`
 for priority review after the national data pull.
 
+**Sensitive demographic data is not PII.** Race, sex, and nativity are
+sensitive *attributes* — protected by exclusion from model inputs at
+preprocessing (DL-014), not by identifier scrubbing. PII protection (no
+names, SSNs, addresses) and demographic protection (no race/sex/nativity
+as features) are distinct controls serving distinct risks. Federal reviewers
+conflate these regularly; the architecture treats them as two separate
+boundaries.
+
 Raw data files are gitignored and stored locally. In production they would
 be written to the S3 raw bucket, where IAM bucket policies and access
 logging restrict and record all access.
@@ -489,6 +497,19 @@ XGBoost's JSON format without requiring a custom inference script. Using a
 custom script triggered the container's pip install mechanism, which failed
 consistently regardless of script naming. Saving the booster directly with
 `model.get_booster().save_model()` bypasses this entirely.
+
+**`model.tar.gz` contents:** A single file — the trained model renamed to
+`xgboost-model` (the filename the SageMaker XGBoost container expects). No
+inference script, no Python dependencies — the container's xgboost runtime
+handles loading and prediction natively.
+
+**Deployment smoke test:** After endpoint creation, `deploy.py` invokes both
+the SageMaker endpoint and the local joblib Pipeline on the same sample and
+compares predictions. Disagreement means the packaging or client-side
+preprocessing has drifted from what training produced. This is the runtime
+validation of the dual-format strategy in DL-011 — the point at which we
+confirm the same model, expressed in two artifact formats, returns the
+same answer.
 
 Endpoint URL:
 ```
