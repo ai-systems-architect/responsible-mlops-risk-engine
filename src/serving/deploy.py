@@ -28,7 +28,6 @@ NIST AI RMF alignment:
     MANAGE 2.4 — endpoint monitored via CloudWatch alarms provisioned in Terraform
 """
 
-import os
 import logging
 import tarfile
 import joblib
@@ -81,41 +80,13 @@ def validate_config():
     logger.info("Config validated — S3_BUCKET and SAGEMAKER_ROLE_ARN set")
 
 
-def create_inference_script():
-    """
-    Write inference.py for the SageMaker XGBoost container.
-
-    The XGBoost container calls model_fn to load the model and
-    predict_fn to run inference. Both must be defined.
-    Script is packaged into model.tar.gz alongside the model file.
-    """
-    script = """import joblib
-import os
-
-
-def model_fn(model_dir):
-    model_path = os.path.join(model_dir, "xgboost-model")
-    model = joblib.load(model_path)
-    return model
-
-
-def predict_fn(input_data, model):
-    proba = model.predict_proba(input_data)[:, 1]
-    return proba.tolist()
-"""
-    os.makedirs("src/serving", exist_ok=True)
-    with open("src/serving/serve_model.py", "w") as f:
-        f.write(script)
-    logger.info("Inference script written: src/serving/serve_model.py")
-
-
 def package_model_artifact(models_dir: str = MODELS_DIR) -> str:
     """
-    Package model and inference script into tar.gz for SageMaker.
+    Package the XGBoost native JSON model into tar.gz for SageMaker.
 
-    SageMaker requires:
-        - model file at root named xgboost-model
-        - serve_model.py at root alongside the model
+    SageMaker's managed XGBoost container loads the model file natively —
+    no inference script required. The container expects the model at the
+    archive root with the filename `xgboost-model`.
 
     Returns:
         Path to local tar.gz
@@ -133,7 +104,7 @@ def package_model_artifact(models_dir: str = MODELS_DIR) -> str:
     with tarfile.open(tar_path, "w:gz") as tar:
         tar.add(model_path, arcname="xgboost-model")
 
-    logger.info(f"Packaged: {model_path} + serve_model.py → {tar_path}")
+    logger.info(f"Packaged: {model_path} → {tar_path}")
 
     # Verify contents
     with tarfile.open(tar_path, "r:gz") as tar:
@@ -180,8 +151,9 @@ def deploy_endpoint(s3_model_uri: str) -> sagemaker.predictor.Predictor:
     """
     Deploy XGBoost model using SageMaker 2.x XGBoostModel class.
 
-    Uses AWS managed XGBoost container — no Dockerfile required.
-    entry_point points to serve_model.py inside the tar.gz.
+    Uses AWS managed XGBoost container — no Dockerfile or inference
+    script required. The container loads the native XGBoost JSON
+    model directly from the tar.gz at `model_data`.
 
     Returns:
         SageMaker Predictor for running inference
@@ -257,7 +229,7 @@ def deploy(
     data_dir: str = PROCESSED_DATA_DIR,
 ) -> None:
     """
-    Full deployment — create script, package, upload, deploy, verify, destroy.
+    Full deployment — package, upload, deploy, verify, destroy.
     """
     logger.info("=" * 55)
     logger.info("SageMaker Deployment — Starting")
