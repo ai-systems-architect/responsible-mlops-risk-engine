@@ -8,14 +8,6 @@ GitHub: https://github.com/ai-systems-architect/responsible-mlops-risk-engine
 
 ---
 
-## Companion Project
-
-[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
-
-A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
-
----
-
 ## What This Is
 
 A production-grade MLOps pipeline for income-based risk scoring built on
@@ -53,7 +45,7 @@ liability under federal civil rights standards.
 
 ---
 
-## Why This Dataset
+## Dataset
 
 The 2023 American Community Survey Public Use Microdata Sample was a
 deliberate choice. It is official U.S. Census Bureau microdata released
@@ -61,6 +53,13 @@ annually — current, government-sourced, and representative of today's
 labor market. The income threshold — $75,000 — approximates the 2023
 U.S. median household income, grounding the classification task in
 present economic reality.
+
+American Community Survey (ACS) Public Use Microdata Sample — 2023
+U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
+
+88,928 Virginia records used for development and production. National
+expansion is a documented future enhancement — one config change:
+STATE_CODE="*" in config.py pulls ~1.5M records across all 50 states.
 
 ---
 
@@ -209,7 +208,7 @@ A full-lifecycle Authority to Operate (ATO) package mapped to NIST SP 800-53 Rev
 
 | Document | Purpose |
 |----------|---------|
-| System Security Plan (SSP) | NIST 800-53 control mapping to P1 architecture |
+| System Security Plan (SSP) | NIST 800-53 control mapping to pipeline architecture |
 | Privacy Impact Assessment (PIA) | Data handling and PII risk analysis |
 | Risk Assessment Report (RAR) | Threat identification and residual risk |
 | Plan of Action & Milestones (POA&M) | Open findings and remediation schedule |
@@ -223,16 +222,18 @@ using a sample agency designation — not tied to a live authorization.
 
 ## Infrastructure
 
-All AWS resources provisioned via Terraform — nothing created manually
-through the console. Infrastructure changes go through the same code
-review process as application code.
+All AWS infrastructure is provisioned via Terraform — nothing created
+manually through the console. Infrastructure changes go through the same
+code review process as application code.
 
-Resources provisioned:
+Provisioned via Terraform:
 - S3 buckets — raw data, processed data, model artifacts
-- SageMaker real-time endpoint — ml.m5.xlarge
-- EventBridge + Lambda — drift-triggered retraining (planned)
-- CloudWatch — model performance and fairness drift alarms
 - IAM roles — least privilege, no wildcard permissions
+- CloudWatch — endpoint availability, error rate, and latency alarms
+
+Deployed outside Terraform:
+- SageMaker real-time endpoint (ml.m5.xlarge) — created by `deploy.py` via the SageMaker SDK, destroyed immediately after verification
+- EventBridge + Lambda drift-triggered retraining — documented future enhancement (planned)
 
 ---
 
@@ -250,8 +251,8 @@ deployment — one config change separates the two.
   narrow — all deployment-target specificity is contained in deploy.py.
   The training pipeline, fairness layer, and MLflow registry are
   cloud-agnostic. The same artifacts deploy to Kubernetes, Azure ML, or
-  GCP Vertex AI without modification — documented with working code in
-  architecture.md.
+  GCP Vertex AI without modification — see architecture.md
+  § Alternative Platforms.
 - **Externalized governance thresholds:** Classification targets and
   fairness thresholds are single values in config.py — the pipeline
   makes no assumptions about what is being classified or what constitutes
@@ -276,14 +277,11 @@ CloudWatch | IAM | Terraform | GitHub Actions + Environments | Streamlit
 
 ---
 
-## Dataset
+## Companion Project
 
-American Community Survey (ACS) Public Use Microdata Sample — 2023
-U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
+[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
 
-88,928 Virginia records used for development and production. National
-expansion is a documented future enhancement — one config change:
-STATE_CODE="*" in config.py pulls ~1.5M records across all 50 states.
+A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
 
 ---
 
