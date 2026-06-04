@@ -82,7 +82,7 @@ aws sagemaker describe-endpoint \
   --query 'EndpointStatus'
 ```
 
-**Cost reminder:** Endpoint costs ~$5/day. Destroy immediately after
+**Cost reminder:** Endpoint costs ~$5.50/day. Destroy immediately after
 verification if not required for active use — see Section 3.
 
 ---

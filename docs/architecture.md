@@ -506,7 +506,7 @@ terraform init
 terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
 ```
 
-Standing cost: ~$0.50/month (CloudWatch alarms + S3 storage). Full cost
+Standing cost: ~$0.32/month (3 CloudWatch alarms + S3 storage). Full cost
 model in the Cost Model section below.
 
 ---
@@ -517,10 +517,10 @@ model in the Cost Model section below.
 
 | Resource | Monthly Cost | Notes |
 |---|---|---|
-| CloudWatch alarms (4) | ~$0.40 | $0.10/alarm/month |
+| CloudWatch alarms (3) | ~$0.30 | $0.10/alarm/month — endpoint-availability, invocation-errors, model-latency |
 | S3 storage (3 buckets) | ~$0.02 | < 1GB total across all buckets |
 | MLflow | $0 | Runs locally on developer machine |
-| **Total standing** | **~$0.50/month** | Zero compute cost when endpoint is down |
+| **Total standing** | **~$0.32/month** | Zero compute cost when endpoint is down |
 
 ### On-Demand Costs (Active Endpoint)
 
