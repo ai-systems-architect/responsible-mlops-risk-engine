@@ -121,11 +121,12 @@ risk response commitments in `docs/fairness_report.md`.
 
 ## Governance Outcomes
 
-Governance outcomes read differently from performance metrics. For a decision-support system in a regulated context,
-the fairness gate pass rate and the ATO documentation package are as
-significant as AUC and F1 — they answer *whether the system can be
-deployed*, not just *whether it predicts well*. The four dimensions below
-summarize the system's governance posture at a glance.
+Governance outcomes read differently from performance metrics. For a
+decision-support system in a regulated context, the fairness gate pass
+rate and the ATO documentation package are as significant as AUC and F1
+— they answer *whether the system can be deployed*, not just *whether it
+predicts well*. The four dimensions below summarize the system's
+governance posture at a glance.
 
 **Model Performance**
 
