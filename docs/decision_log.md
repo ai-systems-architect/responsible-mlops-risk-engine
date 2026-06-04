@@ -267,13 +267,16 @@ This is the standard pattern for XGBoost on SageMaker. Alternatives considered:
 ---
 ## DL-015 — Drift Response Workflow
 **Date:** 2026-03-26
-**Decision:** Drift response is manual review triggered by CloudWatch alarm,
-not automated retraining.
+**Decision:** Drift response is manual review triggered when the published
+DriftShare metric crosses 0.20, not automated retraining.
 **Rationale:** Evidently AI drift_monitor.py publishes 9 metrics to CloudWatch
 namespace ResponsibleRiskEngine/Drift on every run. When drift_share exceeds
-0.20, a CloudWatch alarm fires. The response workflow is:
+0.20, the run flags the breach in its report. A CloudWatch alarm and SNS
+notification wired to the DriftShare metric is documented future work — the
+three provisioned alarms cover endpoint health (availability, errors, latency).
+The response workflow is:
 
-1. CloudWatch alarm notifies the responsible engineer via SNS
+1. The drift run surfaces the breach; the responsible engineer is notified
 2. Engineer reviews the drift report (drift_report_*.html) to identify
    which features drifted and by how much
 3. If drift is confirmed as meaningful — not a data pipeline artifact —

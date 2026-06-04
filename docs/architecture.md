@@ -136,7 +136,7 @@ necessary but not sufficient.
 │                    - endpoint-availability                           │
 │                    - invocation-errors                               │
 │                    - model-latency                                   │
-│                    - DriftShare / DriftedFeatures                    │
+│                    + DriftShare metric (no alarm)                    │
 └──────────────────────────────────────────────────────────────────── ┘
 ```
 
@@ -192,7 +192,7 @@ Census API
                                                                  [deploy.py]
  → Monitor           Evidently AI vs pinned training reference
                      → 3 dataset + 6 per-feature = 9 metrics → CloudWatch
-                     → alarm drift_share > 0.20 → engineer notified
+                     → flag drift_share > 0.20 → engineer notified
                      → human-reviewed retrain (no auto-retrain by design)
                                                           [drift_monitor.py]
 
@@ -395,15 +395,20 @@ verified as appropriate for this feature set:
   Compares expected vs actual counts per category.
 
 9 metrics published to CloudWatch namespace `ResponsibleRiskEngine/Drift`
-on every run. Alert threshold: drift_share > 0.20 triggers retraining
-recommendation.
+on every run. Retraining threshold: drift_share > 0.20.
+
+The three provisioned CloudWatch alarms (endpoint-availability,
+invocation-errors, model-latency) cover endpoint health. A CloudWatch
+alarm and SNS notification wired to the DriftShare metric is documented
+future work — today the drift run publishes the metric and surfaces a
+threshold breach in its report output for engineer review.
 
 **Virginia baseline:** 0/6 features drifted. Drift share: 0.0.
 
 **Drift Response Workflow:**
-When drift_share exceeds 0.20, a CloudWatch alarm fires and notifies
-the responsible engineer. The engineer reviews the drift report to
-confirm the drift is meaningful before initiating retraining. Automated
+When drift_share exceeds 0.20, the drift run flags the breach and the
+responsible engineer reviews the drift report to confirm the drift is
+meaningful before initiating retraining. Automated
 retraining without human review is explicitly not implemented — see
 DL-015 for full rationale.
 
@@ -428,7 +433,7 @@ flowchart TD
     H -- Approved --> J[deploy.py\nManual execution\nLead Architect]
     J --> K([SageMaker Endpoint\nInService])
     K --> L[drift_monitor.py\nEvidently AI — daily]
-    L -- drift_share > 0.20 --> M([CloudWatch Alarm\nEngineer review\nRetraining initiated])
+    L -- drift_share > 0.20 --> M([Drift flagged in report\nEngineer review\nRetraining initiated])
     M --> A
     L -- No drift --> L
 

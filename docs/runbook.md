@@ -139,8 +139,10 @@ justification. See DL-016.
 
 ## 5. Drift Alert Response
 
-**Trigger:** CloudWatch alarm fires on `ResponsibleRiskEngine/Drift`
-namespace. drift_share metric exceeded 0.20.
+**Trigger:** A `drift_monitor.py` run reports drift_share > 0.20 on the
+`ResponsibleRiskEngine/Drift` CloudWatch namespace. (A CloudWatch alarm on
+the DriftShare metric is future work; today the breach surfaces in the drift
+run's report output.)
 
 **Steps:**
 
@@ -287,7 +289,7 @@ The pipeline has two intentional monitoring gaps that standard procedures
 in Sections 4–6 do not cover. First, Evidently AI monitors feature
 distributions — not fairness outcomes directly. A demographic-specific
 feature shift can move a group's PPR across the gate threshold without
-triggering a drift alarm. Second, the fairness gate measures each group
+the drift metric flagging it. Second, the fairness gate measures each group
 against overall PPR, not against each other — a widening inter-group gap
 is not caught by the gate until one group crosses the ±0.20 threshold.
 The scenarios below arise from these boundaries and require responses
@@ -300,8 +302,8 @@ pipeline run fails the fairness gate.
 
 **Design context:** Evidently AI monitors feature distributions, not
 fairness metrics. A shift in occupation or hours_per_week distribution
-within a specific demographic group can move PPR without triggering
-a drift alarm first.
+within a specific demographic group can move PPR without the drift
+metric flagging it first.
 
 **Response:**
 1. Do not override the gate — Section 4 applies
