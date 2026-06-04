@@ -38,7 +38,7 @@ or fairness layers.
 | System | Direction | Purpose |
 |---|---|---|
 | U.S. Census Bureau API (api.census.gov) | Inbound | ACS PUMS 2023 ingestion — read-only, public data |
-| AWS S3 | Outbound (current) | Model artifacts written by deploy.py and read by SageMaker. Raw and processed feature buckets provisioned for the production automation path (see Tradeoffs — Pipeline Execution — Local Scripts) |
+| AWS S3 | Outbound (current) | Model artifacts written by deploy.py and read by SageMaker. Raw and processed feature buckets provisioned for the production automation path (see Deferred Work — Pipeline Execution — Local Scripts) |
 | AWS SageMaker | Outbound | Real-time inference endpoint hosting |
 | AWS CloudWatch | Outbound | Drift metrics and three operational alarms |
 | MLflow (local) | Bidirectional | Experiment tracking and model registry |
@@ -143,6 +143,74 @@ necessary but not sufficient.
 ![Responsible MLOps Pipeline Architecture](Responsible_MLops_pipeline_architecture.png)
 
 *Rendered view of the four-layer pipeline: Data → Training → Serving → Monitoring.*
+
+---
+
+## Execution Flow — Build vs Live Query
+
+The pipeline operates in two distinct execution modes. **Build** runs offline
+end-to-end from data ingestion through deployment. **Live Query** runs online
+per request once the endpoint is in service. The same trained model artifact
+serves both — what differs is who pulls the trigger and how the result is
+verified.
+
+This view complements the layer-oriented System Diagram above — that one
+answers *"what are the layers?"*, this one answers *"what happens offline
+vs online, end-to-end?"*
+
+```
+BUILD  (offline training pipeline)
+═══════════════════════════════════════════════════════════════════════
+Census API
+ → Ingest            raw ACS PUMS → rename/cast → save raw parquet
+                                                                  [ingest.py]
+ → Preprocess        drop invalid → target ≥$75K → SEPARATE sensitive
+                     attrs (race/sex/nativity) ──► sidecar parquet
+                     → encode categoricals → scale numerics
+                     → stratified split → save splits +
+                       encoders/scaler/ACSPreprocessor      [preprocess.py]
+ → Train & Tune      LR baseline (AUC 0.9108) → Ridge C=100 (no benefit)
+                     → XGBoost + Optuna (TPE, 30 trials, 5-fold CV;
+                       person_weight = sample_weight)   [train_xgboost.py]
+ → Evaluate + Gate   metrics · per-group PPR/AUC ×10 (sensitive attrs
+                     rejoined for audit only) · SHAP global beeswarm
+                     → MLflow run
+                     ↳ AUC GATE:      AUC < 0.82      → exit 1 → STOP
+                     ↳ FAIRNESS GATE: any group ±0.20 → exit 1 → STOP
+                     side output: docs/fairness_report.md, shap_summary.png
+ → Register          log params/metrics/fairness/signature → MLflow
+                     · set @staging alias · save native XGBoost JSON
+                     + joblib pipeline                          [register.py]
+ → Human Approval    GitHub Environment "production" — named reviewer
+                     approves (recorded in repo audit log)
+ → Deploy            validate .env vs Terraform outputs → tarball
+                     (just renamed XGBoost JSON, no inference script)
+                     → upload to S3 models bucket → SageMaker real-time
+                     endpoint ml.m5.xlarge (~$5.50/day)
+                     → smoke test (endpoint vs local pipeline, Δ<0.05)
+                     → screenshot → pause-before-destroy → destroy
+                                                                 [deploy.py]
+ → Monitor           Evidently AI vs pinned training reference
+                     → 3 dataset + 6 per-feature = 9 metrics → CloudWatch
+                     → alarm drift_share > 0.20 → engineer notified
+                     → human-reviewed retrain (no auto-retrain by design)
+                                                          [drift_monitor.py]
+
+LIVE QUERY  (online inference)
+═══════════════════════════════════════════════════════════════════════
+Client (Streamlit / API caller)
+ → raw inputs (age, education code, occupation code, hours, COW, marital)
+ → ACSPreprocessor.transform()   client-side: encode + scale (DL-014)
+ → preprocessed features (CSV)
+ → SageMaker real-time endpoint  → managed XGBoost container
+                                  → native XGBoost JSON → probability
+ → back to client
+ → SHAP TreeExplainer            → per-record waterfall ("why this score")
+ → human review (SHAP = the evidence shown to the human)
+    ↳ fallback: endpoint offline → local sklearn pipeline (joblib)
+                                   identical model, identical output
+                                   (Δ<0.05 verified at deploy smoke test)
+```
 
 ---
 
@@ -271,222 +339,6 @@ Full findings in `docs/fairness_report.md`.
 
 ---
 
-## Governance Flow
-
-The complete path from model training to production — every gate, every
-human touchpoint, and every failure path.
-
-```mermaid
-flowchart TD
-    A([Train XGBoost + Optuna]) --> B[evaluate.py\nAUC gate ≥ 0.82]
-    B -- FAIL --> C([Block — AUC below threshold\nRetrain required])
-    B -- PASS --> D[evaluate.py\nFairness gate ±0.20 PPR]
-    D -- FAIL --> E([Block — CI/CD exits code 1\nInvestigate root cause\nDocument in fairness_report.md])
-    E --> A
-    D -- PASS --> F[register.py\nMLflow Registry — alias: staging]
-    F --> G[GitHub Actions\ndeployment-gate job]
-    G --> H{GitHub Environment\nproduction\nRequired Reviewer: Lead Architect}
-    H -- Rejected --> I([Pipeline blocked\nFindings documented\nPrevious model remains live])
-    H -- Approved --> J[deploy.py\nManual execution\nLead Architect]
-    J --> K([SageMaker Endpoint\nInService])
-    K --> L[drift_monitor.py\nEvidently AI — daily]
-    L -- drift_share > 0.20 --> M([CloudWatch Alarm\nEngineer review\nRetraining initiated])
-    M --> A
-    L -- No drift --> L
-
-    style C fill:#c0392b,color:#fff
-    style E fill:#c0392b,color:#fff
-    style I fill:#c0392b,color:#fff
-    style H fill:#e67e22,color:#fff
-    style K fill:#27ae60,color:#fff
-    style J fill:#2980b9,color:#fff
-```
-
-**Why human approval is structural, not procedural**
-
-Automated gates — AUC threshold, fairness gate, CI/CD — are necessary
-but not sufficient. The GitHub Environment gate converts the human
-approval requirement from a documented process into a systemic
-constraint: the deployment job cannot execute until a named reviewer
-clicks approve in the GitHub Actions UI. This is not a reminder to get
-sign-off — it is a hard stop that makes sign-off mechanically required.
-See DL-015 for full rationale.
-
----
-
-## Key Tradeoffs
-
-The three decisions with the most significant architectural and ethical
-consequences. Each is documented in `docs/decision_log.md` with full
-alternatives considered.
-
-| Tradeoff | Decision | What Was Traded |
-|---|---|---|
-| XGBoost vs. Logistic Regression | XGBoost selected — +4.4% AUC, +17.3% F1 | Per-feature interpretability reduced relative to logistic regression. Mitigated by XGBoost feature importance scores and SHAP — global beeswarm in evaluate.py, per-record waterfall in Streamlit demo. |
-| Fairness threshold ±0.20 PPR | Set in `config.py`, enforced as a CI/CD hard stop | Looser than ideal for high-stakes automated decisions; tighter than unmonitored deployment. The ±0.20 threshold balances statistical reliability at small group sizes against regulatory caution. Tightening to ±0.15 would fail the American Indian group (n=68) on Virginia data — a sample size constraint, not a model failure. |
-| Virginia vs. national training data | Virginia (88,928 records) for development and initial production | Faster iteration, proven end-to-end pipeline. Virginia is not demographically representative of national populations — particularly for small racial and ethnic groups. National expansion requires one config change (`STATE_CODE="*"`) and a full fairness audit rerun. |
-
----
-
-## MLflow Experiment Tracking
-
-`src/training/register.py` logs the full artifact bundle to MLflow:
-- All hyperparameters
-- Performance metrics and per-group fairness metrics
-- Model artifact with input/output signature
-- Preprocessing artifacts — encoders and scaler
-- Fairness report attached to the run
-
-Model registered as `income-risk-xgboost v2` with alias `staging`.
-Production promotion requires explicit human approval — no automated
-promotion path exists.
-
-MLflow runs locally — `mlruns/` is gitignored. Start the UI with:
-```bash
-mlflow ui  # http://localhost:5000
-```
-
----
-
-## Infrastructure
-
-All AWS resources are provisioned via Terraform — nothing created manually
-through the console. `infrastructure/main.tf` provisions:
-
-| Resource | Purpose |
-|---|---|
-| S3 raw data | Stores raw ACS PUMS parquet files from Census API pull |
-| S3 processed | Stores engineered features, encoders, scaler artifacts |
-| S3 models | Stores trained model artifacts for SageMaker deployment |
-| IAM role | Least-privilege SageMaker execution role |
-| IAM policy | Scoped to project buckets + default SageMaker bucket |
-| CloudWatch alarms | Endpoint availability, error rate, p99 latency |
-
-```bash
-cd infrastructure
-terraform init
-terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
-```
-
-Standing cost: ~$0.50/month (CloudWatch alarms + S3 storage). Full cost
-model in the Cost Model section below.
-
----
-
-## Security Architecture
-
-### IAM Boundaries
-
-Three IAM boundaries enforced through Terraform — no console-created roles
-or wildcard permissions:
-
-| Principal | Permissions | Scope |
-|---|---|---|
-| SageMaker execution role | Read model artifacts, write CloudWatch metrics | S3 models bucket only — no access to raw or processed data |
-| Developer (AWS CLI) | Full pipeline operations | Credentials in `.env`, never in source code. Account ID scrubbed from git history. |
-| CI/CD (GitHub Actions) | Lint and structure validation only | No AWS credentials in CI/CD — deployment is a manual step by design |
-
-### Data Access Patterns
-
-Three data boundaries enforced through separate S3 buckets (DL-017):
-
-| Bucket | Content | Who Writes | Who Reads |
-|---|---|---|---|
-| S3 raw | ACS PUMS parquet — includes sensitive demographic fields | `ingest.py` | `preprocess.py` |
-| S3 processed | Engineered features — sensitive fields removed before write | `preprocess.py` | Training pipeline |
-| S3 models | Model artifacts only — no PII, no features | `deploy.py` | SageMaker execution role |
-
-Sensitive features (race, sex, nativity) are separated at preprocessing
-and are never written to the processed bucket, never passed to model
-training, and never reach the serving layer.
-
-### PII Handling
-
-ACS PUMS microdata does not include direct identifiers — no names, SSNs,
-or addresses. The dataset contains quasi-identifiers (age, occupation,
-nativity) that could contribute to re-identification at very small group
-sizes. The American Indian group (n=68 in the Virginia test set) is the
-primary small-sample risk and is explicitly flagged in `docs/fairness_report.md`
-for priority review after the national data pull.
-
-**Sensitive demographic data is not PII.** Race, sex, and nativity are
-sensitive *attributes* — protected by exclusion from model inputs at
-preprocessing (DL-014), not by identifier scrubbing. PII protection (no
-names, SSNs, addresses) and demographic protection (no race/sex/nativity
-as features) are distinct controls serving distinct risks. Federal reviewers
-conflate these regularly; the architecture treats them as two separate
-boundaries.
-
-Raw data files are gitignored and stored locally. In production they would
-be written to the S3 raw bucket, where IAM bucket policies and access
-logging restrict and record all access.
-
-### Audit Logging
-
-MLflow captures the complete lineage of every model version —
-hyperparameters, training data provenance, metrics, preprocessing
-artifacts, and fairness results. Every model version can be traced back
-to the exact dataset and configuration that produced it.
-
-CloudWatch logs all SageMaker endpoint invocations. Drift reports are
-timestamped HTML artifacts that would be written to S3 for audit
-retention in production. The decision log (`docs/decision_log.md`)
-records every architectural decision with rationale, alternatives
-considered, and date.
-
-**Production hardening — not implemented in this portfolio:**
-- KMS encryption at rest on S3 buckets
-- CloudTrail enabled for endpoint invocation audit logging
-
----
-
-## Cost Model
-
-### Standing Costs (Infrastructure Only — No Active Endpoint)
-
-| Resource | Monthly Cost | Notes |
-|---|---|---|
-| CloudWatch alarms (4) | ~$0.40 | $0.10/alarm/month |
-| S3 storage (3 buckets) | ~$0.02 | < 1GB total across all buckets |
-| MLflow | $0 | Runs locally on developer machine |
-| **Total standing** | **~$0.50/month** | Zero compute cost when endpoint is down |
-
-### On-Demand Costs (Active Endpoint)
-
-| Resource | Cost | Notes |
-|---|---|---|
-| ml.m5.xlarge SageMaker endpoint | approx. $0.23/hr (approx. $5.50/day) | Destroyed immediately after verification in this portfolio |
-| Optuna training (30 trials, local) | $0 | Runs on developer machine — ~25 minutes |
-| Terraform apply/destroy | ~$0 | Compute is seconds, cost is negligible |
-
-### Instance Type Rationale — ml.m5.xlarge
-
-| Instance | vCPU | RAM | Cost/hr | Assessment |
-|---|---|---|---|---|
-| ml.t3.medium | 2 | 4GB | $0.056 | Insufficient — XGBoost container + model overhead approaches memory ceiling |
-| ml.m5.large | 2 | 8GB | $0.115 | Viable for single-threaded inference; no headroom for concurrent requests |
-| **ml.m5.xlarge** | **4** | **16GB** | **$0.230** | **Selected — standard production baseline, comfortable headroom for moderate concurrency** |
-| ml.m5.2xlarge | 8 | 32GB | $0.461 | Over-provisioned for a single-model endpoint at this traffic volume |
-
-ml.m5.xlarge is the standard starting point for SageMaker real-time
-endpoints in production environments. It provides headroom for the
-XGBoost container overhead, client-side preprocessing, and moderate
-concurrent request volume without triggering auto-scaling prematurely.
-
-### Cost at Scale
-
-National deployment (STATE_CODE="*", ~1.5M records) does not change
-endpoint costs — inference is stateless per request. Training cost
-increases modestly: Optuna runs at national scale would move from local
-execution to a SageMaker Training Job (ml.m5.4xlarge, ~$0.92/hr,
-estimated 2–4 hour training run = ~$2–4 per retrain cycle).
-
-An auto-scaling policy (future work) would scale the endpoint to zero
-during off-peak hours, reducing the approx. $5.50/day standing cost to near
-zero for low-traffic or batch-only deployments.
-
----
-
 ## Serving
 
 `src/serving/deploy.py` packages the model in XGBoost native JSON format,
@@ -557,72 +409,223 @@ DL-015 for full rationale.
 
 ---
 
-## Alternative Deployment Targets
+## Governance Flow
 
-The pipeline is platform-agnostic above the serving layer. MLflow, Evidently,
-XGBoost, and the fairness audit are not AWS-specific. Replacing SageMaker
-requires only a `deploy.py` rewrite — everything else stays unchanged.
+The complete path from model training to production — every gate, every
+human touchpoint, and every failure path.
 
-### Kubernetes
-```
-Dockerfile
-k8s/deployment.yaml   — pod spec, resource limits, health checks
-k8s/service.yaml      — LoadBalancer exposing the inference endpoint
-k8s/hpa.yaml          — HorizontalPodAutoscaler for traffic-based scaling
-```
+```mermaid
+flowchart TD
+    A([Train XGBoost + Optuna]) --> B[evaluate.py\nAUC gate ≥ 0.82]
+    B -- FAIL --> C([Block — AUC below threshold\nRetrain required])
+    B -- PASS --> D[evaluate.py\nFairness gate ±0.20 PPR]
+    D -- FAIL --> E([Block — CI/CD exits code 1\nInvestigate root cause\nDocument in fairness_report.md])
+    E --> A
+    D -- PASS --> F[register.py\nMLflow Registry — alias: staging]
+    F --> G[GitHub Actions\ndeployment-gate job]
+    G --> H{GitHub Environment\nproduction\nRequired Reviewer: Lead Architect}
+    H -- Rejected --> I([Pipeline blocked\nFindings documented\nPrevious model remains live])
+    H -- Approved --> J[deploy.py\nManual execution\nLead Architect]
+    J --> K([SageMaker Endpoint\nInService])
+    K --> L[drift_monitor.py\nEvidently AI — daily]
+    L -- drift_share > 0.20 --> M([CloudWatch Alarm\nEngineer review\nRetraining initiated])
+    M --> A
+    L -- No drift --> L
 
-The model artifact is pulled from S3 at container startup. The same
-joblib-serialized XGBClassifier used locally works inside a standard
-Python container.
-
-### Azure Machine Learning
-```python
-from azure.ai.ml import MLClient
-from azure.ai.ml.entities import Model, ManagedOnlineEndpoint
-
-# Register model in Azure ML Registry
-model = Model(path="models/xgboost_20260312.joblib", ...)
-client.models.create_or_update(model)
-
-# Deploy to managed online endpoint
-endpoint = ManagedOnlineEndpoint(name="responsible-risk-engine")
-client.online_endpoints.begin_create_or_update(endpoint)
-```
-
-### GCP Vertex AI
-```python
-from google.cloud import aiplatform
-
-model = aiplatform.Model.upload(
-    display_name="income-risk-xgboost",
-    artifact_uri="gs://bucket/models/",
-    serving_container_image_uri="us-docker.pkg.dev/vertex-ai/..."
-)
-endpoint = model.deploy(machine_type="n1-standard-4")
+    style C fill:#c0392b,color:#fff
+    style E fill:#c0392b,color:#fff
+    style I fill:#c0392b,color:#fff
+    style H fill:#e67e22,color:#fff
+    style K fill:#27ae60,color:#fff
+    style J fill:#2980b9,color:#fff
 ```
 
-In all three cases: same training pipeline, same fairness audit, same
-MLflow registry, same drift monitoring. Only the deployment target changes.
+**Why human approval is structural, not procedural**
+
+Automated gates — AUC threshold, fairness gate, CI/CD — are necessary
+but not sufficient. The GitHub Environment gate converts the human
+approval requirement from a documented process into a systemic
+constraint: the deployment job cannot execute until a named reviewer
+clicks approve in the GitHub Actions UI. This is not a reminder to get
+sign-off — it is a hard stop that makes sign-off mechanically required.
+See DL-015 for full rationale.
 
 ---
 
-## Production Path
+## Design Tradeoffs
 
-The pipeline is deployed and verified on Virginia (FIPS 51) data.
-National expansion is a documented future enhancement:
+The three decisions with the most significant architectural and ethical
+consequences. Each is documented in `docs/decision_log.md` with full
+alternatives considered.
 
-1. **National data pull** — set `STATE_CODE = "*"` in `config.py`
-2. **Retrain** — full pipeline from `ingest.py` through `register.py`
-3. **National fairness audit** — Virginia results are not nationally representative
-4. **Deployment approval** — human sign-off on national audit results
-5. **Monitor** — drift_monitor.py against national training distribution
-
-This is one config change followed by the same pipeline already
-proven end-to-end on Virginia data.
+| Tradeoff | Decision | What Was Traded |
+|---|---|---|
+| XGBoost vs. Logistic Regression | XGBoost selected — +4.4% AUC, +17.3% F1 | Per-feature interpretability reduced relative to logistic regression. Mitigated by XGBoost feature importance scores and SHAP — global beeswarm in evaluate.py, per-record waterfall in Streamlit demo. |
+| Fairness threshold ±0.20 PPR | Set in `config.py`, enforced as a CI/CD hard stop | Looser than ideal for high-stakes automated decisions; tighter than unmonitored deployment. The ±0.20 threshold balances statistical reliability at small group sizes against regulatory caution. Tightening to ±0.15 would fail the American Indian group (n=68) on Virginia data — a sample size constraint, not a model failure. |
+| Virginia vs. national training data | Virginia (88,928 records) for development and initial production | Faster iteration, proven end-to-end pipeline. Virginia is not demographically representative of national populations — particularly for small racial and ethnic groups. National expansion requires one config change (`STATE_CODE="*"`) and a full fairness audit rerun. |
 
 ---
 
-## Tradeoffs and Future Work
+## MLflow Experiment Tracking
+
+`src/training/register.py` logs the full artifact bundle to MLflow:
+- All hyperparameters
+- Performance metrics and per-group fairness metrics
+- Model artifact with input/output signature
+- Preprocessing artifacts — encoders and scaler
+- Fairness report attached to the run
+
+Model registered as `income-risk-xgboost v2` with alias `staging`.
+Production promotion requires explicit human approval — no automated
+promotion path exists.
+
+MLflow runs locally — `mlruns/` is gitignored. Start the UI with:
+```bash
+mlflow ui  # http://localhost:5000
+```
+
+---
+
+## Infrastructure
+
+All AWS resources are provisioned via Terraform — nothing created manually
+through the console. `infrastructure/main.tf` provisions:
+
+| Resource | Purpose |
+|---|---|
+| S3 raw data | Stores raw ACS PUMS parquet files from Census API pull |
+| S3 processed | Stores engineered features, encoders, scaler artifacts |
+| S3 models | Stores trained model artifacts for SageMaker deployment |
+| IAM role | Least-privilege SageMaker execution role |
+| IAM policy | Scoped to project buckets + default SageMaker bucket |
+| CloudWatch alarms | Endpoint availability, error rate, p99 latency |
+
+```bash
+cd infrastructure
+terraform init
+terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
+```
+
+Standing cost: ~$0.50/month (CloudWatch alarms + S3 storage). Full cost
+model in the Cost Model section below.
+
+---
+
+## Cost Model
+
+### Standing Costs (Infrastructure Only — No Active Endpoint)
+
+| Resource | Monthly Cost | Notes |
+|---|---|---|
+| CloudWatch alarms (4) | ~$0.40 | $0.10/alarm/month |
+| S3 storage (3 buckets) | ~$0.02 | < 1GB total across all buckets |
+| MLflow | $0 | Runs locally on developer machine |
+| **Total standing** | **~$0.50/month** | Zero compute cost when endpoint is down |
+
+### On-Demand Costs (Active Endpoint)
+
+| Resource | Cost | Notes |
+|---|---|---|
+| ml.m5.xlarge SageMaker endpoint | approx. $0.23/hr (approx. $5.50/day) | Destroyed immediately after verification in this portfolio |
+| Optuna training (30 trials, local) | $0 | Runs on developer machine — ~25 minutes |
+| Terraform apply/destroy | ~$0 | Compute is seconds, cost is negligible |
+
+### Instance Type Rationale — ml.m5.xlarge
+
+| Instance | vCPU | RAM | Cost/hr | Assessment |
+|---|---|---|---|---|
+| ml.t3.medium | 2 | 4GB | $0.056 | Insufficient — XGBoost container + model overhead approaches memory ceiling |
+| ml.m5.large | 2 | 8GB | $0.115 | Viable for single-threaded inference; no headroom for concurrent requests |
+| **ml.m5.xlarge** | **4** | **16GB** | **$0.230** | **Selected — standard production baseline, comfortable headroom for moderate concurrency** |
+| ml.m5.2xlarge | 8 | 32GB | $0.461 | Over-provisioned for a single-model endpoint at this traffic volume |
+
+ml.m5.xlarge is the standard starting point for SageMaker real-time
+endpoints in production environments. It provides headroom for the
+XGBoost container overhead, client-side preprocessing, and moderate
+concurrent request volume without triggering auto-scaling prematurely.
+
+### Cost at Scale
+
+National deployment (STATE_CODE="*", ~1.5M records) does not change
+endpoint costs — inference is stateless per request. Training cost
+increases modestly: Optuna runs at national scale would move from local
+execution to a SageMaker Training Job (ml.m5.4xlarge, ~$0.92/hr,
+estimated 2–4 hour training run = ~$2–4 per retrain cycle).
+
+An auto-scaling policy (future work) would scale the endpoint to zero
+during off-peak hours, reducing the approx. $5.50/day standing cost to near
+zero for low-traffic or batch-only deployments.
+
+---
+
+## Security Architecture
+
+### IAM Boundaries
+
+Three IAM boundaries enforced through Terraform — no console-created roles
+or wildcard permissions:
+
+| Principal | Permissions | Scope |
+|---|---|---|
+| SageMaker execution role | Read model artifacts, write CloudWatch metrics | S3 models bucket only — no access to raw or processed data |
+| Developer (AWS CLI) | Full pipeline operations | Credentials in `.env`, never in source code. Account ID scrubbed from git history. |
+| CI/CD (GitHub Actions) | Lint and structure validation only | No AWS credentials in CI/CD — deployment is a manual step by design |
+
+### Data Access Patterns
+
+Three data boundaries enforced through separate S3 buckets (DL-017):
+
+| Bucket | Content | Who Writes | Who Reads |
+|---|---|---|---|
+| S3 raw | ACS PUMS parquet — includes sensitive demographic fields | `ingest.py` | `preprocess.py` |
+| S3 processed | Engineered features — sensitive fields removed before write | `preprocess.py` | Training pipeline |
+| S3 models | Model artifacts only — no PII, no features | `deploy.py` | SageMaker execution role |
+
+Sensitive features (race, sex, nativity) are separated at preprocessing
+and are never written to the processed bucket, never passed to model
+training, and never reach the serving layer.
+
+### PII Handling
+
+ACS PUMS microdata does not include direct identifiers — no names, SSNs,
+or addresses. The dataset contains quasi-identifiers (age, occupation,
+nativity) that could contribute to re-identification at very small group
+sizes. The American Indian group (n=68 in the Virginia test set) is the
+primary small-sample risk and is explicitly flagged in `docs/fairness_report.md`
+for priority review after the national data pull.
+
+**Sensitive demographic data is not PII.** Race, sex, and nativity are
+sensitive *attributes* — protected by exclusion from model inputs at
+preprocessing (DL-014), not by identifier scrubbing. PII protection (no
+names, SSNs, addresses) and demographic protection (no race/sex/nativity
+as features) are distinct controls serving distinct risks. Federal reviewers
+conflate these regularly; the architecture treats them as two separate
+boundaries.
+
+Raw data files are gitignored and stored locally. In production they would
+be written to the S3 raw bucket, where IAM bucket policies and access
+logging restrict and record all access.
+
+### Audit Logging
+
+MLflow captures the complete lineage of every model version —
+hyperparameters, training data provenance, metrics, preprocessing
+artifacts, and fairness results. Every model version can be traced back
+to the exact dataset and configuration that produced it.
+
+CloudWatch logs all SageMaker endpoint invocations. Drift reports are
+timestamped HTML artifacts that would be written to S3 for audit
+retention in production. The decision log (`docs/decision_log.md`)
+records every architectural decision with rationale, alternatives
+considered, and date.
+
+**Production hardening — not implemented in this portfolio:**
+- KMS encryption at rest on S3 buckets
+- CloudTrail enabled for endpoint invocation audit logging
+
+---
+
+## Deferred Work
 
 ### Pipeline Execution — Local Scripts
 Ingestion and preprocessing currently run as local scripts. Raw and
@@ -738,6 +741,20 @@ measure prediction accuracy directly.
 truth outcomes after a defined period, recompute AUC and fairness
 metrics against live predictions, and trigger retraining if model
 performance degrades below MIN_AUC_THRESHOLD.
+
+---
+
+## Alternative Platforms
+
+The pipeline is platform-agnostic above the serving layer. MLflow, Evidently,
+XGBoost, and the fairness audit have no AWS dependencies. Replacing SageMaker
+with Kubernetes, Azure ML, or GCP Vertex AI requires only a `deploy.py`
+rewrite — training, fairness audit, MLflow registry, and drift monitoring
+all remain unchanged. The contract any replacement must satisfy: package the
+model artifact, upload to object storage, create a managed endpoint, and
+return a predictor supporting CSV-in / probability-out. See
+`src/serving/deploy.py` for the current SageMaker implementation of that
+contract.
 
 ---
 
