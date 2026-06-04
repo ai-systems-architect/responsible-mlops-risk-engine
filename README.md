@@ -14,11 +14,7 @@
 
 An architectural perspective on building governed ML systems for regulated environments — fairness enforcement, explainability, human-in-the-loop controls, and federal compliance alignment.
 
-## Companion Project
-
-[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
-
-A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
+---
 
 ## What This Is
 
@@ -34,13 +30,37 @@ and alignment with NIST AI RMF 1.0 from day one.
 
 ---
 
-## Why This Dataset
+## Demo
+
+> This demo simulates an income risk scoring workflow for a federal
+> benefits eligibility system — with real-time fairness audit output
+> and SHAP-based explainability for every prediction.
+
+The demo accepts individual records and returns a probability score, an
+input summary, and a per-prediction SHAP waterfall explaining which
+features pushed the score higher or lower. A separate **Fairness Audit**
+tab shows the per-group PPR breakdown used to vet the model before
+deployment — illustrating how decision-support output and governance
+context would be presented to a human reviewer before any consequential
+action is taken.
+
+![Streamlit Demo](docs/streamlit_demo.gif)
+
+---
+
+## Dataset
 
 The 2023 ACS PUMS was a deliberate choice. It is official Census Bureau
 microdata released annually — current, government-sourced, and representative
 of today's labor market. The income threshold is set at $75,000, approximating
 the 2023 U.S. median household income, grounding the classification task in
 present economic reality.
+
+American Community Survey (ACS) Public Use Microdata Sample — 2023
+U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
+
+88,928 Virginia records used for development. National expansion requires
+one config change: `STATE_CODE = "*"` in `config.py`.
 
 ---
 
@@ -144,6 +164,23 @@ summarize the system's governance posture at a glance.
 
 ---
 
+## Federal ATO Documentation Package
+
+A full-lifecycle Authority to Operate (ATO) package mapped to NIST SP 800-53 Rev. 5 and NIST AI RMF 1.0 controls for a FIPS 199 Moderate-impact environment. Demonstrates the documentation architecture required for federal AI system authorization.
+
+| Document | Purpose |
+|---|---|
+| System Security Plan (SSP) | NIST 800-53 control mapping to pipeline architecture |
+| Privacy Impact Assessment (PIA) | Data handling and PII risk analysis |
+| Risk Assessment Report (RAR) | Threat identification and residual risk |
+| Plan of Action & Milestones (POA&M) | Open findings and remediation schedule |
+| AI Impact Assessment | NIST AI RMF alignment and AI-specific risk |
+| Security Assessment Plan (SAP) | Testing methodology and assessment scope |
+
+[View ATO Package](Federal_ATO_Package_Responsible_MLOps_v1.0.pdf)
+
+---
+
 ## NIST AI RMF 1.0 Alignment
 
 | Function | Implementation |
@@ -157,9 +194,9 @@ Full control mapping in `docs/nist_alignment.md`.
 
 ---
 
-![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
-
 ## Architecture
+
+![Architecture](docs/Responsible_MLops_pipeline_architecture.png)
 
 ```
 Census API → ingest.py → data/raw/
@@ -194,7 +231,7 @@ local-pipeline fallback) — see [docs/architecture.md § Execution Flow — Bui
 
 All AWS resources provisioned via Terraform — nothing created manually
 through the console. `infrastructure/main.tf` provisions S3 buckets,
-SageMaker IAM role with least-privilege policy, and CloudWatch alarms
+SageMaker IAM role with least-privilege policy, and three CloudWatch alarms
 for endpoint availability, error rate, and p99 latency.
 
 ```bash
@@ -204,8 +241,9 @@ terraform plan -var="aws_account_id=YOUR_ACCOUNT_ID"
 terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
 ```
 
-Standing cost: ~$0.30/month (CloudWatch alarms only). SageMaker endpoint
-costs ~$5/day — deployed on demand and destroyed immediately after use.
+Standing cost: ~$0.32/month (3 CloudWatch alarms + S3 storage). SageMaker
+endpoint costs ~$5.50/day — deployed on demand and destroyed immediately
+after use.
 
 ---
 
@@ -255,6 +293,7 @@ responsible-mlops-risk-engine/
     ├── fairness_report.md       # Stakeholder fairness audit
     ├── nist_alignment.md        # NIST AI RMF 1.0 mapping
     ├── architecture.md          # System design
+    ├── adr/                     # Architecture decision records
     ├── model_card.md            # Model details, intended use, limitations
     └── runbook.md               # Operational procedures
 ```
@@ -263,37 +302,19 @@ responsible-mlops-risk-engine/
 
 ## What's Built
 
-- End-to-end MLOps pipeline — ingest through deployment
-- Three-model progression with documented justification
-- Fairness audit — 10 demographic groups, CI/CD gate
-- MLflow experiment tracking — full artifact bundle
-- Terraform IaC — S3, IAM, CloudWatch
-- SageMaker real-time endpoint — deployed and verified
-- Evidently AI drift monitoring — CloudWatch metrics
-- NIST AI RMF 1.0 alignment document
-- Decision log — all architectural decisions captured with rationale
-- Model card — intended use, limitations, fairness summary
-- Runbook — deployment, rollback, drift response, retraining, failure modes
-- Streamlit demo
-- SHAP explainability — global beeswarm (evaluate.py) + per-record waterfall (Streamlit)
-- GitHub Environment governance gate — human approval structurally enforced in CI/CD
+The differentiators that distinguish this from a notebook-grade model:
+
+- **Federal ATO documentation package** — SSP, PIA, RAR, POA&M, AI Impact Assessment, SAP mapped to NIST 800-53 Rev. 5 + AI RMF 1.0
+- **GitHub Environment governance gate** — human approval structurally enforced in CI/CD, not a documented suggestion
+- **Fairness audit as a CI/CD gate** — `evaluate.py` exits code 1 on failure, blocking deployment
+- **Evidently AI drift monitoring** — CloudWatch metrics with a `drift_share > 0.20` retraining trigger
 
 ---
 
-## Federal ATO Documentation Package
+## Tech Stack
 
-A full-lifecycle Authority to Operate (ATO) package mapped to NIST SP 800-53 Rev. 5 and NIST AI RMF 1.0 controls for a FIPS 199 Moderate-impact environment. Demonstrates the documentation architecture required for federal AI system authorization.
-
-| Document | Purpose |
-|---|---|
-| System Security Plan (SSP) | NIST 800-53 control mapping to pipeline architecture |
-| Privacy Impact Assessment (PIA) | Data handling and PII risk analysis |
-| Risk Assessment Report (RAR) | Threat identification and residual risk |
-| Plan of Action & Milestones (POA&M) | Open findings and remediation schedule |
-| AI Impact Assessment | NIST AI RMF alignment and AI-specific risk |
-| Security Assessment Plan (SAP) | Testing methodology and assessment scope |
-
-[View ATO Package](Federal_ATO_Package_Responsible_MLOps_v1.0.pdf)
+Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
+SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
 
 ---
 
@@ -330,42 +351,11 @@ terraform plan -var="aws_account_id=YOUR_ACCOUNT_ID"
 
 ---
 
-## Dataset
+## Companion Project
 
-American Community Survey (ACS) Public Use Microdata Sample — 2023
-U.S. Census Bureau | https://www.census.gov/programs-surveys/acs/microdata.html
+[trust-layer-rag](https://github.com/ai-systems-architect/trust-layer-rag) — *The Trust Layer for Enterprise RAG.*
 
-88,928 Virginia records used for development. National expansion requires
-one config change: `STATE_CODE = "*"` in `config.py`.
-
----
-
-## Tech Stack
-
-Python 3.9 | XGBoost | Scikit-learn | Optuna | MLflow | Evidently AI |
-SHAP | AWS SageMaker | S3 | CloudWatch | IAM | Terraform | GitHub Actions | Streamlit
-
----
-
-*NIST AI RMF 1.0 aligned. Demographic fairness audits built in from day one.*
-
----
-
-> This demo simulates an income risk scoring workflow for a federal
-> benefits eligibility system — with real-time fairness audit output
-> and SHAP-based explainability for every prediction.
-
-## Demo
-
-The demo accepts individual records and returns a probability score, an
-input summary, and a per-prediction SHAP waterfall explaining which
-features pushed the score higher or lower. A separate **Fairness Audit**
-tab shows the per-group PPR breakdown used to vet the model before
-deployment — illustrating how decision-support output and governance
-context would be presented to a human reviewer before any consequential
-action is taken.
-
-![Streamlit Demo](docs/streamlit_demo.gif)
+A reference implementation applying the same governance lens to retrieval-augmented generation: dual-gate guardrails, hybrid retrieval, and three-layer evaluation over federal compliance corpora (NIST 800-53, AI RMF, FedRAMP Moderate). Where this repo governs *predictions*, trust-layer-rag governs *retrieval and generation*.
 
 ---
 
