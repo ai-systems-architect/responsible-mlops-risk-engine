@@ -146,17 +146,23 @@ necessary but not sufficient.
 
 ---
 
-## Execution Flow — Build vs Live Query
+## Execution Flow — Build, Serve, Monitor
 
-The pipeline operates in two distinct execution modes. **Build** runs offline
-end-to-end from data ingestion through deployment. **Live Query** runs online
-per request once the endpoint is in service. The same trained model artifact
-serves both — what differs is who pulls the trigger and how the result is
-verified.
+The pipeline operates in three distinct execution phases. **Build** runs
+offline, end-to-end from data ingestion through deployment. **Serve** (live
+query) runs online, per request, once the endpoint is in service. **Monitor &
+Feedback** runs on a schedule after deployment, watching the live model against
+the training baseline and feeding a drift breach back into a new Build cycle.
+
+Monitoring is its own phase by design — not part of Serve (it is a scheduled
+batch job, `drift_monitor.py`, not a per-request hook, so no single inference
+triggers a drift check) and not part of Build (it operates on the model
+*after* deployment). It is the operational loop that connects Serve back to
+Build.
 
 This view complements the layer-oriented System Diagram above — that one
-answers *"what are the layers?"*, this one answers *"what happens offline
-vs online, end-to-end?"*
+answers *"what are the layers?"*, this one answers *"what runs offline, what
+runs per request, and what runs continuously after deployment?"*
 
 ```
 BUILD  (offline training pipeline)
@@ -190,13 +196,8 @@ Census API
                      → smoke test (endpoint vs local pipeline, Δ<0.05)
                      → screenshot → pause-before-destroy → destroy
                                                                  [deploy.py]
- → Monitor           Evidently AI vs pinned training reference
-                     → 3 dataset + 6 per-feature = 9 metrics → CloudWatch
-                     → flag drift_share > 0.20 → engineer notified
-                     → human-reviewed retrain (no auto-retrain by design)
-                                                          [drift_monitor.py]
 
-LIVE QUERY  (online inference)
+SERVE — LIVE QUERY  (online inference, per request)
 ═══════════════════════════════════════════════════════════════════════
 Client (Streamlit / API caller)
  → raw inputs (age, education code, occupation code, hours, COW, marital)
@@ -210,6 +211,16 @@ Client (Streamlit / API caller)
     ↳ fallback: endpoint offline → local sklearn pipeline (joblib)
                                    identical model, identical output
                                    (Δ<0.05 verified at deploy smoke test)
+
+MONITOR & FEEDBACK  (scheduled, post-deployment — closes the loop to Build)
+═══════════════════════════════════════════════════════════════════════
+drift_monitor.py    scheduled run (daily in production via EventBridge→Lambda)
+ → Evidently AI vs pinned training reference
+ → 3 dataset + 6 per-feature = 9 metrics → CloudWatch
+ → flag drift_share > 0.20 → engineer notified
+ → engineer reviews drift report → decides retrain (no auto-retrain by design)
+ ↺ retrain → re-enters BUILD at Train & Tune
+             (fairness gate + human approval still apply)
 ```
 
 ---

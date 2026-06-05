@@ -221,9 +221,10 @@ baseline.py → ridge.py → train_xgboost.py (Optuna)
                     drift_monitor.py → Evidently AI → CloudWatch
 ```
 
-For the complete two-phase view — offline Build pipeline (ingest → deploy)
-alongside the online Live Query path (request → SHAP → response, with
-local-pipeline fallback) — see [docs/architecture.md § Execution Flow — Build vs Live Query](docs/architecture.md#execution-flow--build-vs-live-query).
+For the complete three-phase view — the offline Build pipeline (ingest →
+deploy), the online Serve / live-query path (request → SHAP → response, with
+local-pipeline fallback), and the scheduled Monitor & Feedback loop that closes
+production back to Build — see [docs/architecture.md § Execution Flow — Build, Serve, Monitor](docs/architecture.md#execution-flow--build-serve-monitor).
 
 ---
 
